@@ -18,7 +18,8 @@ fs.mkdirSync(OUT, { recursive: true });
 const server = await serve(0);
 const port = server.address().port;
 const browser = await chromium.launch({ args: ["--force-color-profile=srgb", "--font-render-hinting=none"] });
-const pageUrl = `http://127.0.0.1:${port}/site/index.html?w=${W}&h=${H}`;
+const COUNTRY = args.country || "us";
+const pageUrl = `http://127.0.0.1:${port}/site/index.html?w=${W}&h=${H}&country=${COUNTRY}`;
 
 async function newPage() {
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: SCALE });

@@ -7,7 +7,8 @@ import { serve } from "./serve.mjs";
 const [W, H] = (process.argv[2] || "1920x1080").split("x").map(Number);
 const times = [2.5, 4.4, 6.9, 9.6, 12.4, 14.3, 17.2, 20.7, 23.3, 25.4, 29.5];
 const server = await serve(0);
-const url = `http://127.0.0.1:${server.address().port}/site/index.html?w=${W}&h=${H}`;
+const country = process.argv[3] || "us";
+const url = `http://127.0.0.1:${server.address().port}/site/index.html?w=${W}&h=${H}&country=${country}`;
 const browser = await chromium.launch();
 const open = async () => {
   const p = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 0.5 });

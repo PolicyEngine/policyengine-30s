@@ -9,11 +9,11 @@ permissions:
   contents: read
 
 env:
-  PYDEPS: --with pytest==9.1.1 --with hypothesis==6.168.1 --with numpy==2.5.3 --with scipy==1.18.1 --with pyloudnorm==0.2.0 --with pyyaml==6.0.3
+  PYDEPS: --with pytest==9.1.1 --with hypothesis==6.168.1 --with numpy==2.5.3 --with scipy==1.18.1 --with pyloudnorm==0.2.0 --with pyyaml==6.0.3 --with pyproj==3.8.0 --with shapely==2.1.2 --with pypdf==6.19.0
 
 jobs:
   invariants:
-    name: Invariants (published numbers, family curve, timeline helpers, score)
+    name: Invariants (published numbers, family curves, timeline helpers, score, UK geography)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,11 +32,13 @@ jobs:
           uv run --with pyyaml==6.0.3 tools/adapt_outputs.py > /dev/null
           uv run --with pyyaml==6.0.3 tools/build_video_data.py
           test -z "$(git status --porcelain -- data/)" || { git status; git diff; exit 1; }
-      - name: Published numbers, family curve, score (pytest + Hypothesis)
-        run: uv run $PYDEPS pytest -m "not slow"
+      - name: Published numbers, family curves, score, UK geography (pytest + Hypothesis)
+        run: |
+          uv run $PYDEPS pytest -m "not slow"
+          test -z "$(git status --porcelain -- data/)" || { git status; git diff; exit 1; }
 
   determinism:
-    name: Frames depend only on t (both layouts)
+    name: Frames depend only on t (both layouts, US and UK)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

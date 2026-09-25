@@ -104,6 +104,17 @@ describe("number formatting", () => {
       return Number(shown) === expected;
     }));
   });
+
+  test("statText prefixes only money, in the stated currency", () => {
+    const stat = fc.record({ kind: fc.constantFrom("billion", "pct", "count"), value: fc.nat(1e6), digits: fc.constant(0) });
+    fc.assert(fc.property(stat, fc.constantFrom("$", "£"), fc.nat(20), (s, cur, i) => {
+      const lead = s.kind === "billion" ? cur : "";
+      const withCur = statText(s, { cur });
+      return withCur.startsWith(lead + String(s.value).slice(0, 1))
+        && statText(s, i) === statText(s)  // an index from Array.map never becomes the currency
+        && (s.kind !== "billion" || statText(s).startsWith("$"));
+    }));
+  });
 });
 
 describe("colour mixing", () => {

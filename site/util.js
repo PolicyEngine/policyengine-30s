@@ -43,9 +43,11 @@ export const mix = (a, b, t) => {
 export const fmtYaml = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "_");
 
 // a statistic's final on-screen text; no intermediate values ever reach the screen
-export function statText(s) {
+// currency goes in an options object so that stats.map(statText), which passes the index
+// second, still reads "$"
+export function statText(s, { cur = "$" } = {}) {
   const v = s.value.toFixed(s.digits ?? 0);
-  if (s.kind === "billion") return `$${v}<span class="u">billion</span>`;
+  if (s.kind === "billion") return `${cur}${v}<span class="u">billion</span>`;
   if (s.kind === "pct") return `${v}<span class="u" style="margin-left:0.04em">%</span>`;
   return fmt(s.value);
 }

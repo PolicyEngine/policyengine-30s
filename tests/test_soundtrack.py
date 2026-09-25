@@ -72,10 +72,11 @@ def test_mastering_hits_platform_targets(score):
     assert (np.abs(mix[:, :edge]) <= ramp).all() and (np.abs(mix[:, -edge:]) <= ramp[::-1]).all()
 
 
-def test_heavy_cues_land_on_downbeats(score):
+@pytest.mark.parametrize("path", ["audio/events.json", "audio/uk/events.json"])
+def test_heavy_cues_land_on_downbeats(path):
     """At 120 BPM in 4/4 a bar is 2 s, so the hit, the drop and the logo sit on even seconds
     (a hit on beat 4 made the bar sound like 3/4); the riser and swell end where they resolve."""
-    events, _, _, _ = score
+    events = json.loads((ROOT / path).read_text())
     at = {e["type"]: e for e in events}
     for kind in ("hit", "drop", "logo"):
         assert abs(at[kind]["t"] / 2 - round(at[kind]["t"] / 2)) < 1e-9, (kind, at[kind]["t"])
@@ -260,3 +261,19 @@ def test_momentary_refuses_windows_that_do_not_fit():
     for i0, i1, w in ((0, 10, 995), (-1, 3, 10), (5, 5, 10), (0, 3, 0)):
         with pytest.raises(ValueError):
             sd.momentary(x, i0, i1, w)
+
+
+def test_uk_sweeps_sit_under_the_music_around_it():
+    """The UK score shares the synthesis; measured on its returned audio, its sweeps get the
+    same margin before the master and the same per-sweep floors after it."""
+    events = json.loads((ROOT / "audio" / "uk" / "events.json").read_text())
+    report, stems = [], {}
+    sd.build(events, report, stems)
+    kinds = [e["type"] for e in events if e["type"] in SWEEPS]
+    assert len(report) == len(kinds) > 0
+    for r, kind in zip(report, kinds):
+        i, w = r["window_start"], r["window_len"]
+        pre = _loudness(stems["bed_pre"], i, w) - _loudness(stems["sweeps_pre"], i, w)
+        post = _loudness(stems["bed"], i, w) - _loudness(stems["sweeps"], i, w)
+        floor = 4.3 if kind == "swell" else sd.SWEEP_UNDER - 0.5
+        assert abs(pre - sd.SWEEP_UNDER) < 0.05 and floor <= post <= sd.SWEEP_UNDER + 0.3, (r["t"], kind, pre, post)

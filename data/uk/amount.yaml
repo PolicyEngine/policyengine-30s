@@ -1,0 +1,22 @@
+description: The Personal Allowance is deducted from general income.
+values:
+  2015-04-06: 10_600
+  2017-04-06: 11_500
+  2018-04-06: 11_850
+  2019-04-06: 12_500
+  2021-04-06: 12_570
+  2027-04-06: 12_570
+  2030-04-06:
+    value: 12_570
+    metadata:
+      reference:
+        - title: OBR Economic and Fiscal Outlook November 2025
+          href: https://obr.uk/efo/economic-and-fiscal-outlook-november-2025/
+metadata:
+  period: year
+  label: Personal allowance
+  unit: currency-GBP
+  uprating: gov.economic_assumptions.indices.obr.consumer_price_index
+  reference:
+    - title: Income Tax Act 2007 s. 35
+      href: https://www.legislation.gov.uk/ukpga/2007/3/section/35
