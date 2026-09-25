@@ -8,7 +8,7 @@ plink lands on the frame that causes it:
   pour   the statute pours in         word   quote words appear
   whoosh camera dive / token flight   lock   the $2,200 box locks
   ping   citation / reform value      key    code lines type in
-  land   $2,200 lands in the code    curve  the family's gain drawn across earnings (pitch = gain)
+  land   $2,200 lands in the code    curve  the family's gain drawn across earnings (brightness = gain)
   rise   into the second fact        hit    "+$1,600 from $58,000" lands
   drop   zoom out to the nation      plink  households light up ($800 step = pitch)
   stat   a statistic lands           decile a decile bar grows (pitch = height)
@@ -182,12 +182,19 @@ def pluck(m, dur=0.28, bright=1.0):
     return out * exp_decay(n, dur / 3.2) * 0.25
 
 
-def bell(m, dur=1.2):
+def felt(m, dur=0.9):
+    """A soft felted mallet: mostly fundamental, a little second harmonic that dies fast,
+    a short muffled contact noise, and a low-pass so nothing sparkles."""
     n = int(dur * SR)
     f = midi(m)
     t = t_axis(n)
-    mod = np.sin(2 * np.pi * f * 3.5 * t) * 2.2 * exp_decay(n, 0.25)
-    return np.sin(2 * np.pi * f * t + mod) * exp_decay(n, dur / 4) * 0.22
+    tone = (np.sin(2 * np.pi * f * t)
+            + 0.3 * np.sin(4 * np.pi * f * t) * exp_decay(n, 0.06)
+            + 0.06 * np.sin(6 * np.pi * f * t) * exp_decay(n, 0.03))
+    x = tone * (1 - np.exp(-t / 0.004)) * exp_decay(n, 0.22)
+    k = int(0.012 * SR)
+    x[:k] += bp(rng.standard_normal(k), 600, 2400) * exp_decay(k, 0.003) * 0.25
+    return lp(x, 2400) * 0.2
 
 
 def pad_voice(m, n, detune=0.12):
@@ -329,7 +336,7 @@ def build(events):
             x = bp(rng.standard_normal(n), 1800, 6000) * exp_decay(n, 0.008) * 0.25
             place(sfx, x, t, 1.0, rng.uniform(-0.3, 0.3))
         elif kind == "lock":
-            place(sfx, bell(74, 1.4), t, 0.9)
+            place(sfx, felt(62, 1.0), t, 0.7)
         elif kind == "whoosh":
             d = e.get("dur", 0.8) + 0.1
             env_w = env_adsr(int(d * SR), a=d * 0.85, d=0.02, s=1.0, r=0.06)
@@ -341,31 +348,34 @@ def build(events):
             place(sfx, thump, t, 0.9)
             k = int(0.04 * SR)
             place(sfx, np.sin(2 * np.pi * 1320 * t_axis(k)) * exp_decay(k, 0.008) * 0.5, t, 1.0)
-            place(sfx, bell(81, 0.8), t, 0.9)
         elif kind == "key":
             n = int(0.03 * SR)
             lo, hi_ = (2500, 6000) if e["i"] % 2 == 0 else (4000, 9000)
             x = bp(rng.standard_normal(n), lo, hi_) * exp_decay(n, 0.005) * 0.25
             place(sfx, x, t + rng.uniform(-0.008, 0.008), 1.0, rng.uniform(-0.5, 0.5))
         elif kind == "ping":
-            place(sfx, bell(PENTA[e.get("note", 0) % len(PENTA)] + 12, 1.0), t, 0.8)
+            place(sfx, felt(PENTA[e.get("note", 0) % len(PENTA)], 0.9), t, 0.6)
         elif kind == "tick":
             n = int(0.04 * SR)
             f = midi(74 + e["k"] * 0.75)
             x = np.sin(2 * np.pi * f * t_axis(n)) * exp_decay(n, 0.012) * 0.35
             place(sfx, x, t, 1.0, -0.2 + e["k"] * 0.025)
         elif kind == "curve":
-            # a glide whose pitch follows the computed gain as the curve draws: flat and
-            # low while the family gains $0, rising as income tax absorbs the extra credit, steady at the top
+            # the held chord opens as the computed gain rises: dark while the family gains $0,
+            # brightening as income tax absorbs the extra credit, fully open at the top
             sm = np.array(e["samples"], dtype=float)
             t0, t1 = sm[0, 0], sm[-1, 0]
             n = int((t1 - t0 + 0.25) * SR)
             tt = t0 + t_axis(n)
             g = np.interp(tt, sm[:, 0], sm[:, 1]) / e["gmax"]
-            f = midi(62 + 12 * g)                      # D4 at $0 up to D5 at the full gain
-            amp = (0.35 + 0.65 * g) * env_adsr(n, a=0.08, d=0.05, s=1.0, r=0.3)
-            x = np.sin(2 * np.pi * np.cumsum(f) / SR) + 0.25 * np.sin(4 * np.pi * np.cumsum(f) / SR)
-            place(sfx, x * amp * 0.16, t0, 1.0, 0.2)
+            v = sum(pad_voice(m + 12, n) for m in CHORDS[chord_at(t0)]) / 4
+            out = np.zeros(n); zi = np.zeros((1, 2)); blk = 128
+            for s0 in range(0, n, blk):
+                fc = 350 * (2600 / 350) ** g[s0]           # 350 Hz at $0, 2.6 kHz at the full gain
+                sos = butter(2, fc / (SR / 2), "low", output="sos")
+                out[s0: s0 + blk], zi = sosfilt(sos, v[s0: s0 + blk], zi=zi)
+            amp = (0.5 + 0.5 * g) * env_adsr(n, a=0.12, d=0.05, s=1.0, r=0.3)
+            place(sfx, out * amp * 0.22, t0, 1.0, 0.2)
         elif kind == "rise":
             d = e["dur"]
             n = int(d * SR)
@@ -395,13 +405,13 @@ def build(events):
             # G5 -> D6 -> A6: one child's worth, two, three or more; fits both Dm and C
             m = [79, 86, 93][min(3, max(1, step)) - 1]
             g = min(0.6, 0.12 + 0.02 * np.sqrt(nlit))
-            place(sfx, bell(m, 0.9), t, g, rng.uniform(-0.7, 0.7))
+            place(sfx, felt(m - 12, 0.7), t, 0.8 * g, rng.uniform(-0.7, 0.7))
         elif kind == "stat":
-            place(sfx, bell(74 + 5 * e["i"], 1.0), t, 0.6)
+            place(sfx, felt(62 + 5 * e["i"], 0.9), t, 0.5)
         elif kind == "decile":
             FPENT = [65, 67, 69, 72, 74, 77, 79, 81, 84]
             m = FPENT[int(round(e.get("v", (e["n"] - 3) / 9) * (len(FPENT) - 1)))]
-            place(sfx, bell(m, 0.8), t, 0.38, -0.6 + 0.12 * (e["n"] - 3))
+            place(sfx, felt(m - 12, 0.8), t, 0.3, -0.6 + 0.12 * (e["n"] - 3))
         elif kind == "swell":
             d = e["dur"] - 0.03
             n = int(d * SR)
@@ -414,8 +424,6 @@ def build(events):
             for m in [53, 57, 60, 65, 69, 72]:  # F major, open voicing: the resolve
                 v = pad_voice(m, n) * exp_decay(n, 1.0)
                 place(sfx, lp(v, 3000), t, 0.16, rng.uniform(-0.5, 0.5))
-            for j, m in enumerate([77, 81, 84, 89]):
-                place(sfx, bell(m, 2.5), t + j * 0.09, 0.4, -0.3 + 0.2 * j)
 
     # sidechain duck on the music bus
     mus *= duck[None, :]
