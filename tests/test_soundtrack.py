@@ -53,7 +53,12 @@ def test_mastering_hits_platform_targets(score):
     lufs = pyln.Meter(sd.SR).integrated_loudness(mix.T)
     true_peak = 20 * np.log10(np.abs(resample_poly(mix, 4, 1, axis=1)).max())
     assert abs(lufs + 14) < 0.5 and true_peak <= -1.0
-    assert np.abs(mix[:, :10]).max() < 1e-3 and np.abs(mix[:, -10:]).max() < 1e-3  # clean edges
+    # clean edges: the 30 ms fades start and end at exactly zero, and no sample inside them
+    # exceeds the limiter ceiling (-2 dBTP) times the fade ramp
+    edge = int(0.03 * sd.SR)
+    ramp = np.linspace(0, 1, edge) * 10 ** (-2.0 / 20) + 1e-9
+    assert (mix[:, 0] == 0).all() and (mix[:, -1] == 0).all()
+    assert (np.abs(mix[:, :edge]) <= ramp).all() and (np.abs(mix[:, -edge:]) <= ramp[::-1]).all()
 
 
 def test_synthesis_is_deterministic(score):

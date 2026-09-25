@@ -40,9 +40,9 @@ const T = {
   famIn: 8.5,
   chartIn: 8.8,
   curveA: 9.1, curveB: 10.9,        // the curve draws across earnings, left to right
-  riseA: 10.65, riseB: 11.45,
-  line1: 11.0, line2: 11.5,         // "$0 below …" then "+$1,600 from …" on the beat
-  noteIn: 11.9,
+  riseA: 11.0, riseB: 11.95,        // riser over beats 3-4, drums and bass out
+  line1: 11.0, line2: 12.0,         // "+$1,600 from …" and its hit on the downbeat, never on beat 4
+  noteIn: 12.15,
   famOut: 13.75,
   zoomA: 14.0, zoomB: 16.3,
   rippleA: 14.9, rippleB: 16.6,
