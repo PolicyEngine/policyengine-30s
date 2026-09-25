@@ -52,13 +52,32 @@ def test_mastering_hits_platform_targets(score):
     _, mix = score
     lufs = pyln.Meter(sd.SR).integrated_loudness(mix.T)
     true_peak = 20 * np.log10(np.abs(resample_poly(mix, 4, 1, axis=1)).max())
-    assert abs(lufs + 14) < 0.5 and true_peak <= -1.0
+    # the limiter's ceiling is -2 dBTP; 1e-3 dB allows for the 4x resampling estimate
+    assert abs(lufs + 14) < 0.5 and true_peak <= -2.0 + 1e-3
     # clean edges: the 30 ms fades start and end at exactly zero, and no sample inside them
     # exceeds the limiter ceiling (-2 dBTP) times the fade ramp
     edge = int(0.03 * sd.SR)
     ramp = np.linspace(0, 1, edge) * 10 ** (-2.0 / 20) + 1e-9
     assert (mix[:, 0] == 0).all() and (mix[:, -1] == 0).all()
     assert (np.abs(mix[:, :edge]) <= ramp).all() and (np.abs(mix[:, -edge:]) <= ramp[::-1]).all()
+
+
+def test_heavy_cues_land_on_downbeats(score):
+    """At 120 BPM in 4/4 a bar is 2 s, so the hit, the drop and the logo sit on even seconds
+    (a hit on beat 4 made the bar sound like 3/4); the riser and swell end where they resolve."""
+    events, _ = score
+    at = {e["type"]: e for e in events}
+    for kind in ("hit", "drop", "logo"):
+        assert abs(at[kind]["t"] / 2 - round(at[kind]["t"] / 2)) < 1e-9, (kind, at[kind]["t"])
+    assert 0 < at["hit"]["t"] - (at["rise"]["t"] + at["rise"]["dur"]) <= 0.1
+    assert abs(at["swell"]["t"] + at["swell"]["dur"] - at["logo"]["t"]) < 1e-9
+
+
+def test_curve_cue_survives_out_of_range_gains():
+    """A curve gain outside [0, gmax] is clamped instead of pushing the filter past Nyquist."""
+    cues = [{"t": t, "type": "curve", "gmax": 1.0, "samples": [[t, 0.0], [t + 0.5, g], [t + 1, g]]}
+            for t, g in ((1.0, -5.0), (5.0, 2.2), (9.0, 1e6))]
+    assert np.isfinite(sd.build(cues)).all()
 
 
 def test_synthesis_is_deterministic(score):

@@ -364,10 +364,12 @@ def build(events):
             # the held chord opens as the computed gain rises: dark while the family gains $0,
             # brightening as income tax absorbs the extra credit, fully open at the top
             sm = np.array(e["samples"], dtype=float)
+            assert sm.ndim == 2 and np.isfinite(sm).all() and np.isfinite(e["gmax"]) and e["gmax"] > 0, "bad curve cue"
             t0, t1 = sm[0, 0], sm[-1, 0]
             n = int((t1 - t0 + 0.25) * SR)
             tt = t0 + t_axis(n)
-            g = np.interp(tt, sm[:, 0], sm[:, 1]) / e["gmax"]
+            # clamped so a gain beyond gmax can never push the cutoff past Nyquist
+            g = np.clip(np.interp(tt, sm[:, 0], sm[:, 1]) / e["gmax"], 0.0, 1.0)
             v = sum(pad_voice(m + 12, n) for m in CHORDS[chord_at(t0)]) / 4
             out = np.zeros(n); zi = np.zeros((1, 2)); blk = 128
             for s0 in range(0, n, blk):
