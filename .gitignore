@@ -1,0 +1,21 @@
+# dependencies and environments
+node_modules/
+data/.venv/
+data/compute/districts/.venv-*/
+**/__pycache__/
+
+# PolicyEngine datasets and microdata-derived binaries (fetched from Hugging Face on rerun)
+data/pe_data/
+data/compute/districts/pe_data/
+data/compute/districts/out/*.npz
+**/*.h5
+
+# build and render outputs (videos and posters ship as GitHub release assets)
+site/bundle.js
+frames/
+out/
+audio/*.wav
+review/*.png
+.DS_Store
+.hypothesis/
+data/raw/

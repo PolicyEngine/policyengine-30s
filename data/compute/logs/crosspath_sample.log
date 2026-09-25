@@ -1,0 +1,17 @@
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+n_households 6000
+n_tax_units 8405
+max_abs_baseline_diff_by_variable {'income_tax': 3543.3427734375, 'income_tax_before_credits': 2570.6953125, 'ctc': 0.0, 'ctc_value': 2418.51953125, 'refundable_ctc': 3543.3427734375, 'ctc_limiting_tax_liability': 22971.625, 'tax_unit_itemizes': 1.0, 'salt_deduction': 0.0}
+tax_units_where_d_income_tax_differs_over_1usd 25
+of_which_ctc_limiting_tax_liability_differs 25
+of_which_itemize_with_positive_salt 24
+tax_units_where_ctc_limiting_tax_liability_differs 918
+of_those_itemize_with_positive_salt 914
+of_those_pepy_limiting_liability_higher 915
+weighted_d_income_tax_pepy -3110123391.4941425
+weighted_d_income_tax_raw -3110808897.264449
+weighted_diff_all 685505.7703063339
+weighted_diff_in_units_with_limiting_liability_difference 685505.7703063376
+weighted_d_ctc_value_pepy 3138427911.6676702
+weighted_d_ctc_value_raw 3111241805.8644505

@@ -1,0 +1,613 @@
+{
+  "meta": {
+    "description": "National 2026 static microsimulation, baseline vs reform, PolicyEngine US via policyengine.py.",
+    "reform": {
+      "parameter": "gov.irs.credits.ctc.amount.base[0].amount",
+      "yaml_path": "policyengine_us/parameters/gov/irs/credits/ctc/amount/base.yaml (bracket 0 amount)",
+      "baseline_value_2026": 2200,
+      "reform_value": 3000,
+      "period": "2026-01-01.2026-12-31",
+      "nothing_else_changes": true
+    },
+    "interface": "policyengine.py Simulation + economic_impact_analysis (policyengine-us Microsimulation underneath)",
+    "dataset": {
+      "manifest_path": "/Users/maxghenis/PolicyEngine/policyengine-30s/data/.venv/lib/python3.13/site-packages/policyengine/data/bundle/manifest.json",
+      "bundle_version": "6.1.1",
+      "bundle_id": "us-6.1.1",
+      "build_id": "populace-us-2024-spm-20260915",
+      "default_dataset": "populace_us_2024",
+      "default_dataset_uri": "hf://policyengine/populace-us/populace_us_2024.h5@populace-us-2024-spm-20260915",
+      "repo_id": "policyengine/populace-us",
+      "repo_type": "dataset",
+      "path": "populace_us_2024.h5",
+      "revision": "populace-us-2024-spm-20260915",
+      "expected_sha256": "6496cc4393d4d3c6574f76eca231de5898c803b9067645591fd5c4d3e65aee84",
+      "certification": {
+        "built_with_model_version": "2.2.1",
+        "certified_by": "policyengine.py bundle certification",
+        "certified_for_model_version": "2.2.1",
+        "compatibility_basis": "built_with_model_package",
+        "data_build_id": "populace-us-2024-spm-20260915"
+      },
+      "spm_measurement": {
+        "as_of": null,
+        "county_vintage": "2020",
+        "forecast_content_sha256": "3d86d5c4c0423480e6b69b75d222ffa4a7a2639e4094df5ba2504af01be17173",
+        "geography_id": null,
+        "geography_kind": "county",
+        "scenario": "ce_trend"
+      },
+      "local_source_path": "/Users/maxghenis/PolicyEngine/policyengine-30s/data/pe_data/populace_us_2024.h5",
+      "local_source_resolved_path": "/Users/maxghenis/.cache/huggingface/hub/datasets--policyengine--populace-us/blobs/6496cc4393d4d3c6574f76eca231de5898c803b9067645591fd5c4d3e65aee84",
+      "local_source_sha256": "6496cc4393d4d3c6574f76eca231de5898c803b9067645591fd5c4d3e65aee84",
+      "sha256_matches_manifest": true,
+      "year_2026_dataset_key": "populace_us_2024_2026",
+      "year_2026_dataset_path": "/Users/maxghenis/PolicyEngine/policyengine-30s/data/pe_data/populace_us_2024_year_2026.h5",
+      "year_2026_dataset_sha256": "05f0c2e5c08acab1038dda7bcf35c9ba91b2d8b941a506681ae8f0a0e753eea9",
+      "year_2026_note": "Produced by policyengine.py create_datasets: every input variable of the bundle dataset computed for 2026 by policyengine-us (its uprating), weights mapped to all entities.",
+      "n_households": 57240,
+      "n_people": 166321,
+      "n_tax_units": 79729
+    },
+    "spm": {
+      "spm_config": {
+        "forecast_content_sha256": "3d86d5c4c0423480e6b69b75d222ffa4a7a2639e4094df5ba2504af01be17173",
+        "scenario": "ce_trend",
+        "geography_kind": "county",
+        "geography_id": null,
+        "county_vintage": "2020",
+        "as_of": null
+      }
+    },
+    "behavioral_responses": "none (static; no labor-supply elasticities set)",
+    "versions": {
+      "policyengine": "6.1.1",
+      "policyengine-us": "2.2.1",
+      "policyengine-core": "3.32.5",
+      "spm-calculator": "1.0.0",
+      "microdf-python": "1.3.10",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "h5py": "3.16.0",
+      "tables": "3.11.1",
+      "python": "3.13.9",
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+    },
+    "runtime": {
+      "started_at_utc": "2026-09-25T02:16:36.663707+00:00",
+      "finished_at_utc": "2026-09-25T02:40:11.913466+00:00",
+      "wall_clock_seconds": 1415.23,
+      "laps_seconds": {
+        "imports": 31.66,
+        "hash_source_dataset": 0.51,
+        "ensure_datasets_year_2026": 8.52,
+        "economic_impact_analysis": 1374.12,
+        "child_poverty": 0.08,
+        "aggregates": 0.03,
+        "sample": 0.04
+      }
+    },
+    "script": "compute/national.py",
+    "dataset_selection_note": "Dataset = the default US dataset of the latest released policyengine.py (6.1.1, PyPI 2026-09-22): manifest data_releases.us.default_dataset_uri = hf://policyengine/populace-us/populace_us_2024.h5@populace-us-2024-spm-20260915. Observed 2026-09-24: PolicyEngine/policyengine-api master (aac95d3) pins policyengine[models]==5.2.0 in pyproject.toml and uv.lock; the 5.2.0 bundle manifest's US default is populace_us_2024.h5@populace-us-2024-buildp-sparse-rmloss100-cae8640-20260728T011454Z. We did not trace the API's runtime-bundle/worker routing, so the live app's national run may use that older build; these numbers use the 6.1.1 default as the latest release."
+  },
+  "budget": {
+    "federal_income_tax_revenue_change": -31193255593.887222,
+    "household_net_income_total_change": 31173279982.64904,
+    "state_income_tax_revenue_change": 19976387.47974727,
+    "employee_payroll_tax_change": 0.0,
+    "household_tax_change": -31173279432.99625,
+    "household_benefits_change": 0.0,
+    "ctc_allowed_change": 53284814121.523026,
+    "ctc_value_change": 31361208740.216385,
+    "refundable_ctc_change": 8260055923.868845,
+    "non_refundable_ctc_change": 45024758212.64563,
+    "eitc_change": 0.0,
+    "ctc_allowed_baseline_total": 157468351520.51172,
+    "ctc_allowed_reform_total": 210753165642.03473,
+    "ctc_value_baseline_total": 133452316963.26514,
+    "ctc_value_reform_total": 164813525703.4815,
+    "federal_income_tax_baseline_total": 2610988240120.9688,
+    "federal_income_tax_reform_total": 2579794984527.0815,
+    "policyengine_py_budgetary_impact": {
+      "federal": -31193255593.57556,
+      "state": 19976387.47974727,
+      "unattributed": -226.900435898453,
+      "total": -31173279432.99625,
+      "sign_convention": "positive = government better off; negative = cost"
+    },
+    "federal_budget_cost_2026_usd": 31193255593.887222,
+    "second_aggregation_check": {
+      "minus_federal_income_tax_change": 31193255593.887222,
+      "sum_weighted_ctc_value_change": 31361208740.216385,
+      "sum_weighted_ctc_allowed_change": 53284814121.523026,
+      "gap_revenue_vs_ctc_value": -167953146.3291626,
+      "gap_revenue_vs_ctc_allowed": -22091558527.635803,
+      "gap_revenue_vs_ctc_value_share": -0.005355442378526248,
+      "tax_units_with_abs_residual_over_1usd": 128,
+      "weighted_tax_units_with_abs_residual_over_1usd": 203042.86269683586,
+      "weighted_ctc_allowed_but_not_realized_change": 21923605381.30664,
+      "tax_units_with_unrealized_ctc_increase_over_1usd": 8166,
+      "weighted_tax_units_with_unrealized_ctc_increase_over_1usd": 15976291.152925119,
+      "net_income_vs_federal_revenue_gap": -19975611.238182068
+    },
+    "state_income_tax_change_by_state": {
+      "AL": 16102604.137693102,
+      "OR": 7463251.889190904,
+      "UT": 339987.068354547,
+      "MO": 315943.89988755353,
+      "OK": -4245400.033373395
+    },
+    "gap_explanation": {
+      "revenue_vs_ctc_value": "-\u0394federal income tax = $31.193B vs \u03a3 weighted \u0394ctc_value = $31.361B: gap -$168.0M (-0.54% of \u0394ctc_value). All of it comes from 128 sample tax units (203k weighted); every other tax unit has -\u0394income_tax = \u0394ctc_value to within $1. 95.3% of those units itemize. For 89.1% of them, ctc_limiting_tax_liability exceeds income_tax_before_credits (mean of limiting minus actual pre-credit tax over all 128 units: +$1,542). policyengine-us computes that liability in a side branch with salt_deduction set to 0; its documentation says it excludes SALT to avoid circular dependencies. So ctc_value counts nonrefundable CTC these units cannot use, and their refundable CTC is computed against the higher no-SALT liability. Result: the revenue change is smaller than \u0394ctc_value.",
+      "ctc_allowed_vs_value": "\u03a3 weighted \u0394ctc (credit allowed after phase-out, before the tax-liability limit) = $53.285B, of which $21.924B is not realized (\u0394ctc - \u0394ctc_value) across 15.98M weighted tax units. Those tax units lack enough income tax liability to use the higher nonrefundable credit, and their refundable portion is still capped at gov.irs.credits.ctc.refundable.individual_max per child and by the earned-income phase-in. The reform does not change either limit.",
+      "net_income_vs_federal_revenue": "\u03a3 \u0394household_net_income = $31.173B is $20.0M below the federal revenue loss because state income taxes rise on net by $20.0M. By state: AL +16.10M, OR +7.46M, UT +0.34M, MO +0.32M, OK -4.25M. This follows the policyengine-us formulas: Alabama (al_federal_income_tax_deduction), Oregon (or_federal_tax_liability_subtraction) and Missouri (mo_federal_income_tax_deduction) let filers deduct federal income tax, so a lower federal tax raises state tax. Oklahoma's child credit is based on the federal CTC (ok_federal_ctc), so it grows and state tax falls. Payroll tax and household_benefits do not change."
+    }
+  },
+  "households_total_weighted": 124557998.60092863,
+  "people_total_weighted": 345685947.2612134,
+  "winners": {
+    "share_households_gaining_over_1usd": 0.19226182079131385,
+    "share_households_losing_over_1usd": 0.0,
+    "weighted_households_gaining_over_1usd": 23947747.60513646,
+    "share_people_in_gaining_households": 0.2902477956021573,
+    "share_people_in_gaining_households_alt_hhweight_x_count": 0.2902477956021573,
+    "average_gain_among_gaining_households": 1301.7203646336593,
+    "average_change_all_households": 250.2712016313389
+  },
+  "deciles": {
+    "definition": "policyengine.py calculate_decile_impacts (used by economic_impact_analysis): households ranked by baseline household_net_income with weights household_weight x household_count_people (so each decile holds ~10% of people); households with negative baseline net income get -1 and are excluded; average change = household-weighted mean of reform minus baseline household_net_income within decile.",
+    "weighted_households_excluded_negative_income": 296399.3450586898,
+    "by_decile": [
+      {
+        "decile": 1,
+        "average_change_household_net_income": 5.95100811318116,
+        "baseline_mean": 26385.04660113562,
+        "reform_mean": 26390.9976092488,
+        "relative_change_percent": 0.022554472626646897,
+        "households_better_off_weighted": 262177.5106654682,
+        "households_worse_off_weighted": 9842.575701224909,
+        "households_no_change_weighted": 16743273.926261064
+      },
+      {
+        "decile": 2,
+        "average_change_household_net_income": 73.01058981122333,
+        "baseline_mean": 47554.912925459736,
+        "reform_mean": 47627.92351527096,
+        "relative_change_percent": 0.15352901586774906,
+        "households_better_off_weighted": 1405020.6973633752,
+        "households_worse_off_weighted": 12397.629850119352,
+        "households_no_change_weighted": 12448586.138789244
+      },
+      {
+        "decile": 3,
+        "average_change_household_net_income": 130.53244934549002,
+        "baseline_mean": 61415.460322939136,
+        "reform_mean": 61545.992772284626,
+        "relative_change_percent": 0.21254004880711636,
+        "households_better_off_weighted": 1800138.8811812948,
+        "households_worse_off_weighted": 4819.248700499535,
+        "households_no_change_weighted": 10680940.005519398
+      },
+      {
+        "decile": 4,
+        "average_change_household_net_income": 234.0187691233441,
+        "baseline_mean": 76322.48919816947,
+        "reform_mean": 76556.50796729281,
+        "relative_change_percent": 0.3066183658079077,
+        "households_better_off_weighted": 2658912.3728985395,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 9971610.004748184
+      },
+      {
+        "decile": 5,
+        "average_change_household_net_income": 330.26954576652497,
+        "baseline_mean": 93930.55482628178,
+        "reform_mean": 94260.8243720483,
+        "relative_change_percent": 0.35161034274452674,
+        "households_better_off_weighted": 3127058.4666476296,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 9214156.068829056
+      },
+      {
+        "decile": 6,
+        "average_change_household_net_income": 377.4005585936102,
+        "baseline_mean": 116110.7441708544,
+        "reform_mean": 116488.14472944802,
+        "relative_change_percent": 0.32503500110056444,
+        "households_better_off_weighted": 3221819.1081214435,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 8663324.005343264
+      },
+      {
+        "decile": 7,
+        "average_change_household_net_income": 448.0753038432449,
+        "baseline_mean": 143589.95575661384,
+        "reform_mean": 144038.03106045708,
+        "relative_change_percent": 0.31205198266286555,
+        "households_better_off_weighted": 3334912.6666294467,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 8005379.266462021
+      },
+      {
+        "decile": 8,
+        "average_change_household_net_income": 401.85196982260095,
+        "baseline_mean": 178468.5317282827,
+        "reform_mean": 178870.3836981053,
+        "relative_change_percent": 0.22516684926529135,
+        "households_better_off_weighted": 3031793.0948861022,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 7706918.5244577145
+      },
+      {
+        "decile": 9,
+        "average_change_household_net_income": 430.4107537085947,
+        "baseline_mean": 237827.9872407969,
+        "reform_mean": 238258.3979945055,
+        "relative_change_percent": 0.1809756533291479,
+        "households_better_off_weighted": 3294541.379586865,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 7460226.899103366
+      },
+      {
+        "decile": 10,
+        "average_change_household_net_income": 257.3170416119974,
+        "baseline_mean": 534165.5532077864,
+        "reform_mean": 534422.8702493984,
+        "relative_change_percent": 0.04817177746987796,
+        "households_better_off_weighted": 1859273.3438648582,
+        "households_worse_off_weighted": 0.0,
+        "households_no_change_weighted": 9344477.440259764
+      }
+    ],
+    "alt_policyengine_us_household_income_decile": {
+      "definition": "policyengine-us household_income_decile variable (MicroSeries.decile_rank on person-weighted household_net_income; negatives -1)",
+      "by_decile": [
+        {
+          "decile": 1,
+          "average_change_household_net_income": 5.951008113183466
+        },
+        {
+          "decile": 2,
+          "average_change_household_net_income": 73.01058981121831
+        },
+        {
+          "decile": 3,
+          "average_change_household_net_income": 130.5324493455021
+        },
+        {
+          "decile": 4,
+          "average_change_household_net_income": 234.01876912334333
+        },
+        {
+          "decile": 5,
+          "average_change_household_net_income": 330.26954576650877
+        },
+        {
+          "decile": 6,
+          "average_change_household_net_income": 377.40055859360115
+        },
+        {
+          "decile": 7,
+          "average_change_household_net_income": 448.07530384324065
+        },
+        {
+          "decile": 8,
+          "average_change_household_net_income": 401.8519698226126
+        },
+        {
+          "decile": 9,
+          "average_change_household_net_income": 430.41075370861523
+        },
+        {
+          "decile": 10,
+          "average_change_household_net_income": 257.3170416119897
+        }
+      ],
+      "household_weighted_share_same_decile_as_primary": 1.0
+    }
+  },
+  "poverty": {
+    "spm": {
+      "all_people": {
+        "rate_baseline": 0.1363294219073997,
+        "rate_reform": 0.13526268006322162,
+        "headcount_baseline": 47127165.35163308,
+        "headcount_reform": 46758407.68674521,
+        "population": 345685947.2612134,
+        "people_lifted_out": 368757.66488786787,
+        "rate_change_pp": -0.10667418441780707,
+        "relative_change": -0.007824736797480471
+      },
+      "children_under_18": {
+        "rate_baseline": 0.17419476025376157,
+        "rate_reform": 0.17176613511966507,
+        "headcount_baseline": 13578076.949525833,
+        "headcount_reform": 13388771.261431217,
+        "population": 77947677.24210365,
+        "children_lifted_out": 189305.68809461594,
+        "rate_change_pp": -0.24286251340965015,
+        "relative_change": -0.013942010256557402,
+        "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
+      }
+    },
+    "spm_deep": {
+      "all_people": {
+        "rate_baseline": 0.030719726023787274,
+        "rate_reform": 0.03060648894250918,
+        "headcount_baseline": 10619377.590137852,
+        "headcount_reform": 10580233.12243114,
+        "population": 345685947.2612134,
+        "people_lifted_out": 39144.46770671196,
+        "rate_change_pp": -0.011323708127809404,
+        "relative_change": -0.003686135780977048
+      },
+      "children_under_18": {
+        "rate_baseline": 0.022801615023490387,
+        "rate_reform": 0.022564292461674237,
+        "headcount_baseline": 1777332.9284497304,
+        "headcount_reform": 1758834.1859990158,
+        "population": 77947677.24210365,
+        "children_lifted_out": 18498.742450714577,
+        "rate_change_pp": -0.023732256181615077,
+        "relative_change": -0.010408147035710382,
+        "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
+      }
+    }
+  },
+  "poverty_direct_recompute_children_spm": {
+    "rate_baseline": 0.17419476025376157,
+    "rate_reform": 0.17176613511966504,
+    "children_lifted_out": 189305.6880946178,
+    "children_pushed_in": 0.0
+  },
+  "program_statistics": [
+    {
+      "program": "income_tax",
+      "baseline_total": 2610988240120.9688,
+      "reform_total": 2579794984527.0815,
+      "change": -31193255593.887207
+    },
+    {
+      "program": "employee_payroll_tax",
+      "baseline_total": 852126740432.294,
+      "reform_total": 852126740432.294,
+      "change": 0.0
+    },
+    {
+      "program": "state_income_tax",
+      "baseline_total": 613863154510.2471,
+      "reform_total": 613883130897.7268,
+      "change": 19976387.479736328
+    },
+    {
+      "program": "snap",
+      "baseline_total": 100179106496.91595,
+      "reform_total": 100179106496.91595,
+      "change": 0.0
+    },
+    {
+      "program": "tanf",
+      "baseline_total": 5045530740.344602,
+      "reform_total": 5045530740.344602,
+      "change": 0.0
+    },
+    {
+      "program": "ssi",
+      "baseline_total": 57855559925.80327,
+      "reform_total": 57855559925.80327,
+      "change": 0.0
+    },
+    {
+      "program": "social_security",
+      "baseline_total": 1705545725120.4775,
+      "reform_total": 1705545725120.4775,
+      "change": 0.0
+    },
+    {
+      "program": "medicare_cost",
+      "baseline_total": 705428518098.2336,
+      "reform_total": 705428518098.2336,
+      "change": 0.0
+    },
+    {
+      "program": "medicaid",
+      "baseline_total": 591749246022.5889,
+      "reform_total": 591749246022.5889,
+      "change": 0.0
+    },
+    {
+      "program": "eitc",
+      "baseline_total": 68266669758.05227,
+      "reform_total": 68266669758.05227,
+      "change": 0.0
+    },
+    {
+      "program": "ctc",
+      "baseline_total": 157468351520.51172,
+      "reform_total": 210753165642.03473,
+      "change": 53284814121.52301
+    }
+  ],
+  "inequality": {
+    "gini_baseline": 0.474372535319455,
+    "gini_reform": 0.47406791766297884
+  },
+  "second_path_check": {
+    "description": "Same reform and bundle dataset (same sha256) run through policyengine_us.Microsimulation directly (no policyengine.py create_datasets / Simulation layer). See compute/national_raw_check.py.",
+    "raw_meta": {
+      "dataset_sha256": "6496cc4393d4d3c6574f76eca231de5898c803b9067645591fd5c4d3e65aee84",
+      "dataset_uri": "hf://policyengine/populace-us/populace_us_2024.h5@populace-us-2024-spm-20260915",
+      "spm_config": {
+        "forecast_content_sha256": "3d86d5c4c0423480e6b69b75d222ffa4a7a2639e4094df5ba2504af01be17173",
+        "scenario": "ce_trend",
+        "geography_kind": "county",
+        "geography_id": null,
+        "county_vintage": "2020",
+        "as_of": null
+      },
+      "runtime": {
+        "started_at_utc": "2026-09-25T02:19:08.559583+00:00",
+        "finished_at_utc": "2026-09-25T02:38:51.046988+00:00",
+        "wall_clock_seconds": 1182.47,
+        "laps_seconds": {
+          "imports": 21.37,
+          "hash": 0.68,
+          "construct": 21.62,
+          "aggregates": 850.27,
+          "poverty": 288.42
+        }
+      },
+      "script": "compute/national_raw_check.py"
+    },
+    "comparison": {
+      "federal_budget_cost_2026_usd": {
+        "policyengine_py": 31193255593.887222,
+        "raw_policyengine_us": 31268857951.06516,
+        "abs_diff": 75602357.17793655,
+        "rel_diff": 0.00242367639217344
+      },
+      "household_net_income_total_change": {
+        "policyengine_py": 31173279982.64904,
+        "raw_policyengine_us": 31248955940.019867,
+        "abs_diff": 75675957.37082672,
+        "rel_diff": 0.002427590468919143
+      },
+      "ctc_value_change": {
+        "policyengine_py": 31361208740.216385,
+        "raw_policyengine_us": 31269290759.11712,
+        "abs_diff": -91917981.09926605,
+        "rel_diff": -0.002930945100384286
+      },
+      "ctc_allowed_change": {
+        "policyengine_py": 53284814121.523026,
+        "raw_policyengine_us": 53284814121.523026,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0
+      },
+      "state_income_tax_revenue_change": {
+        "policyengine_py": 19976387.47974727,
+        "raw_policyengine_us": 19902689.16708197,
+        "abs_diff": -73698.31266529858,
+        "rel_diff": -0.003689271282909205
+      },
+      "households_total_weighted": {
+        "policyengine_py": 124557998.60092863,
+        "raw_policyengine_us": 124557998.60092863,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0
+      },
+      "people_total_weighted": {
+        "policyengine_py": 345685947.2612134,
+        "raw_policyengine_us": 345685947.2612134,
+        "abs_diff": 0.0,
+        "rel_diff": 0.0
+      },
+      "share_households_gaining_over_1usd": {
+        "policyengine_py": 0.19226182079131385,
+        "raw_policyengine_us": 0.19235133879326063,
+        "abs_diff": 8.951800194678672e-05,
+        "rel_diff": 0.0004656046716833706
+      },
+      "share_people_in_gaining_households_hhweight_x_count": {
+        "policyengine_py": 0.2902477956021573,
+        "raw_policyengine_us": 0.2903072321099196,
+        "abs_diff": 5.943650776230047e-05,
+        "rel_diff": 0.00020477849845161307
+      },
+      "spm_child_rate_baseline": {
+        "policyengine_py": 0.17419476025376157,
+        "raw_policyengine_us": 0.17419475962506567,
+        "abs_diff": -6.286959008949822e-10,
+        "rel_diff": -3.6091550628682363e-09
+      },
+      "spm_child_rate_reform": {
+        "policyengine_py": 0.17176613511966507,
+        "raw_policyengine_us": 0.17176613457986922,
+        "abs_diff": -5.397958469099962e-10,
+        "rel_diff": -3.1426209044869886e-09
+      },
+      "spm_children_lifted_out": {
+        "policyengine_py": 189305.68809461594,
+        "raw_policyengine_us": 189305.6811650619,
+        "abs_diff": -0.006929554045200348,
+        "rel_diff": -3.660510212316981e-08
+      },
+      "spm_all_rate_baseline": {
+        "policyengine_py": 0.1363294219073997,
+        "raw_policyengine_us": 0.13634485653845452,
+        "abs_diff": 1.543463105482812e-05,
+        "rel_diff": 0.00011321570090212755
+      },
+      "spm_all_rate_reform": {
+        "policyengine_py": 0.13526268006322162,
+        "raw_policyengine_us": 0.13527811472403728,
+        "abs_diff": 1.5434660815660806e-05,
+        "rel_diff": 0.00011410879045459297
+      }
+    },
+    "explanation": "The two paths agree exactly on households and people (weighted), CTC allowed (\u03a3 weighted ctc) and child SPM poverty (to about 1e-9); all-person SPM rates differ by about 1e-4 relative. They differ on the federal income tax change by 0.24%. On the 128 flagged tax units (compute/diagnose_gap.py), the paths match on income_tax_before_credits, salt_deduction, tax_unit_itemizes and ctc. They differ only on ctc_limiting_tax_liability, and from it on refundable_ctc, ctc_value and income_tax. In the policyengine.py path the limiting liability exceeds actual pre-credit tax for 89.1% of those units. In the direct policyengine_us path it is at or below actual pre-credit tax for 100.0% of them. In a uniform random subset of 6,000 households (compute/crosspath_sample.py), every one of the 25 tax units whose \u0394income_tax differs between paths also has a different ctc_limiting_tax_liability; 24 of them itemize with positive SALT. So the gap between paths is confined to how the no-SALT side branch evaluates for SALT itemizers under each construction path (itemization choice also differs for a few units). We did not trace the root cause inside policyengine-core's branch mechanics.",
+    "diagnostics": {
+      "flagged_units": {
+        "n_flagged_tax_units": 128,
+        "weighted_flagged_tax_units": 203042.86269683586,
+        "weighted_gap_usd": -167953146.32916057,
+        "subset_households": 128,
+        "pepy_share_itemizing_baseline": 0.953125,
+        "pepy_share_limiting_liability_exceeds_income_tax_before_credits_baseline": 0.953125,
+        "pepy_mean_limiting_minus_actual_before_credits": 1541.9392614364624,
+        "pepy_weighted_minus_d_income_tax": 238124820.7830417,
+        "pepy_weighted_d_ctc_value": 406078083.8882699,
+        "raw_weighted_minus_d_income_tax": 396114319.4449135,
+        "raw_weighted_d_ctc_value": 396547254.18453926,
+        "raw_share_itemizing_baseline": 0.953125,
+        "raw_mean_limiting_minus_actual_before_credits": -210.06223487854004,
+        "max_abs_diff_between_paths": {
+          "income_tax": 4359.4697265625,
+          "income_tax_before_credits": 0.0,
+          "income_tax_capped_non_refundable_credits": 6.103515625e-05,
+          "ctc": 0.0,
+          "ctc_value": 296.48681640625,
+          "refundable_ctc": 4359.4697265625,
+          "ctc_limiting_tax_liability": 7484.7119140625,
+          "tax_unit_itemizes": 0.0,
+          "salt_deduction": 0.0,
+          "itemized_taxable_income_deductions": 0.0,
+          "standard_deduction": 0.0,
+          "taxable_income": 0.0
+        }
+      },
+      "flagged_units_share_pepy_limiting_gt_actual": 0.890625,
+      "flagged_units_share_raw_limiting_le_actual": 1.0,
+      "crosspath_random_subset": {
+        "n_households": 6000,
+        "n_tax_units": 8405,
+        "max_abs_baseline_diff_by_variable": {
+          "income_tax": 3543.3427734375,
+          "income_tax_before_credits": 2570.6953125,
+          "ctc": 0.0,
+          "ctc_value": 2418.51953125,
+          "refundable_ctc": 3543.3427734375,
+          "ctc_limiting_tax_liability": 22971.625,
+          "tax_unit_itemizes": 1.0,
+          "salt_deduction": 0.0
+        },
+        "tax_units_where_d_income_tax_differs_over_1usd": 25,
+        "of_which_ctc_limiting_tax_liability_differs": 25,
+        "of_which_itemize_with_positive_salt": 24,
+        "tax_units_where_ctc_limiting_tax_liability_differs": 918,
+        "of_those_itemize_with_positive_salt": 914,
+        "of_those_pepy_limiting_liability_higher": 915,
+        "weighted_d_income_tax_pepy": -3110123391.4941425,
+        "weighted_d_income_tax_raw": -3110808897.264449,
+        "weighted_diff_all": 685505.7703063339,
+        "weighted_diff_in_units_with_limiting_liability_difference": 685505.7703063376,
+        "weighted_d_ctc_value_pepy": 3138427911.6676702,
+        "weighted_d_ctc_value_raw": 3111241805.8644505
+      },
+      "files": [
+        "compute/checks/gap_diagnostic.json",
+        "compute/checks/crosspath_sample.json"
+      ]
+    }
+  }
+}

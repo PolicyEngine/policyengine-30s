@@ -1,0 +1,413 @@
+{
+  "meta": {
+    "description": "Example household, baseline vs reform, PolicyEngine household calculator (no microdata).",
+    "reform": {
+      "parameter": "gov.irs.credits.ctc.amount.base[0].amount",
+      "yaml_path": "policyengine_us/parameters/gov/irs/credits/ctc/amount/base.yaml (bracket 0 amount)",
+      "baseline_value_2026": 2200,
+      "reform_value": 3000,
+      "period": "2026-01-01.2026-12-31",
+      "nothing_else_changes": true
+    },
+    "reform_dict_passed": {
+      "gov.irs.credits.ctc.amount.base[0].amount": {
+        "2026-01-01.2026-12-31": 3000
+      }
+    },
+    "interface": "policyengine.py pe.us.calculate_household (primary); policyengine_us.Simulation situation dict (check)",
+    "year": 2026,
+    "household_definition": {
+      "state_code": "OH",
+      "filing_status": "JOINT",
+      "people": [
+        {
+          "age": 35,
+          "employment_income": 60000,
+          "is_tax_unit_head": true
+        },
+        {
+          "age": 34,
+          "employment_income": 0,
+          "is_tax_unit_spouse": true
+        },
+        {
+          "age": 4,
+          "is_tax_unit_dependent": true
+        },
+        {
+          "age": 8,
+          "is_tax_unit_dependent": true
+        }
+      ],
+      "notes": "No county given; SPM geography set explicitly to national (see spm_selection)."
+    },
+    "spm_selection": {
+      "forecast_content_sha256": "3d86d5c4c0423480e6b69b75d222ffa4a7a2639e4094df5ba2504af01be17173",
+      "scenario": "ce_trend",
+      "geography_kind": "national",
+      "geography_id": null,
+      "county_vintage": "2020",
+      "as_of": null
+    },
+    "dataset": "none (household calculator mode; no microdata)",
+    "model_parameters_2026": {
+      "gov.irs.credits.ctc.amount.base[0].amount": 2200.0,
+      "gov.irs.credits.ctc.refundable.individual_max": 1700.0,
+      "gov.irs.credits.ctc.refundable.phase_in.rate": 0.15,
+      "gov.irs.credits.ctc.refundable.phase_in.threshold": 2500.0,
+      "gov.simulation.include_health_benefits_in_net_income": false
+    },
+    "versions": {
+      "policyengine": "6.1.1",
+      "policyengine-us": "2.2.1",
+      "policyengine-core": "3.32.5",
+      "spm-calculator": "1.0.0",
+      "microdf-python": "1.3.10",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "h5py": "3.16.0",
+      "tables": "3.11.1",
+      "python": "3.13.9",
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+    },
+    "runtime": {
+      "started_at_utc": "2026-09-25T02:16:42.938487+00:00",
+      "finished_at_utc": "2026-09-25T02:18:28.970067+00:00",
+      "wall_clock_seconds": 106.03,
+      "laps_seconds": {
+        "imports": 31.58,
+        "policyengine_py_baseline": 5.18,
+        "policyengine_py_reform": 24.83,
+        "raw_policyengine_us_baseline": 0.67,
+        "raw_policyengine_us_reform": 21.42,
+        "county_sensitivity": 22.25
+      }
+    },
+    "script": "compute/household.py"
+  },
+  "ctc_variable_names": {
+    "ctc": "Total CTC allowed (nonrefundable + refundable) after phase-out, before the tax-liability limit on the nonrefundable part",
+    "ctc_value": "Actual CTC value realized = min(ctc, ctc_limiting_tax_liability + refundable_ctc)"
+  },
+  "key_numbers": [
+    {
+      "variable": "employment_income",
+      "entity": "person",
+      "label": "Employment income (sum of people)",
+      "baseline": 60000.0,
+      "reform": 60000.0,
+      "change": 0.0
+    },
+    {
+      "variable": "adjusted_gross_income",
+      "entity": "tax_unit",
+      "label": "Federal AGI",
+      "baseline": 60000.0,
+      "reform": 60000.0,
+      "change": 0.0
+    },
+    {
+      "variable": "taxable_income",
+      "entity": "tax_unit",
+      "label": "Federal taxable income",
+      "baseline": 27800.0,
+      "reform": 27800.0,
+      "change": 0.0
+    },
+    {
+      "variable": "income_tax_before_credits",
+      "entity": "tax_unit",
+      "label": "Federal income tax before credits",
+      "baseline": 2840.0,
+      "reform": 2840.0,
+      "change": 0.0
+    },
+    {
+      "variable": "ctc",
+      "entity": "tax_unit",
+      "label": "Federal CTC allowed (ctc: nonrefundable + refundable, before tax-liability limit)",
+      "baseline": 4400.0,
+      "reform": 6000.0,
+      "change": 1600.0
+    },
+    {
+      "variable": "ctc_value",
+      "entity": "tax_unit",
+      "label": "Federal CTC value realized (ctc_value = min(ctc, liability + refundable_ctc))",
+      "baseline": 4400.0,
+      "reform": 6000.0,
+      "change": 1600.0
+    },
+    {
+      "variable": "non_refundable_ctc",
+      "entity": "tax_unit",
+      "label": "Nonrefundable CTC (ctc - refundable_ctc)",
+      "baseline": 2840.0,
+      "reform": 2840.0,
+      "change": 0.0
+    },
+    {
+      "variable": "refundable_ctc",
+      "entity": "tax_unit",
+      "label": "Refundable CTC (ACTC)",
+      "baseline": 1560.0,
+      "reform": 3160.0,
+      "change": 1600.0
+    },
+    {
+      "variable": "ctc_limiting_tax_liability",
+      "entity": "tax_unit",
+      "label": "Tax liability that limits the nonrefundable CTC",
+      "baseline": 2840.0,
+      "reform": 2840.0,
+      "change": 0.0
+    },
+    {
+      "variable": "ctc_refundable_maximum",
+      "entity": "tax_unit",
+      "label": "Maximum refundable CTC (per-child refundable cap x children)",
+      "baseline": 3400.0,
+      "reform": 3400.0,
+      "change": 0.0
+    },
+    {
+      "variable": "ctc_phase_in",
+      "entity": "tax_unit",
+      "label": "ACTC earned-income phase-in amount",
+      "baseline": 8625.0,
+      "reform": 8625.0,
+      "change": 0.0
+    },
+    {
+      "variable": "eitc",
+      "entity": "tax_unit",
+      "label": "Federal EITC",
+      "baseline": 1242.2958984375,
+      "reform": 1242.2958984375,
+      "change": 0.0
+    },
+    {
+      "variable": "income_tax",
+      "entity": "tax_unit",
+      "label": "Total federal income tax (after all credits; negative = net refund)",
+      "baseline": -2802.2958984375,
+      "reform": -4402.2958984375,
+      "change": -1600.0
+    },
+    {
+      "variable": "employee_payroll_tax",
+      "entity": "tax_unit",
+      "label": "Employee payroll tax (Social Security + Medicare)",
+      "baseline": 4590.0,
+      "reform": 4590.0,
+      "change": 0.0
+    },
+    {
+      "variable": "state_income_tax",
+      "entity": "tax_unit",
+      "label": "State income tax (Ohio)",
+      "baseline": 656.4382934570312,
+      "reform": 656.4382934570312,
+      "change": 0.0
+    },
+    {
+      "variable": "snap",
+      "entity": "spm_unit",
+      "label": "SNAP (annual)",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0
+    },
+    {
+      "variable": "household_benefits",
+      "entity": "household",
+      "label": "All household benefits counted in net income",
+      "baseline": 1737.0035400390625,
+      "reform": 1737.0035400390625,
+      "change": 0.0
+    },
+    {
+      "variable": "household_refundable_tax_credits",
+      "entity": "household",
+      "label": "Refundable tax credits (federal + state)",
+      "baseline": 2802.2958984375,
+      "reform": 4402.2958984375,
+      "change": 1600.0
+    },
+    {
+      "variable": "household_tax_before_refundable_credits",
+      "entity": "household",
+      "label": "Taxes before refundable credits (federal + state + payroll)",
+      "baseline": 5246.4384765625,
+      "reform": 5246.4384765625,
+      "change": 0.0
+    },
+    {
+      "variable": "household_health_costs",
+      "entity": "household",
+      "label": "Health out-of-pocket costs subtracted from net income",
+      "baseline": 0.0,
+      "reform": 0.0,
+      "change": 0.0
+    },
+    {
+      "variable": "household_net_income",
+      "entity": "household",
+      "label": "Household net income",
+      "baseline": 59292.86328125,
+      "reform": 60892.859375,
+      "change": 1599.99609375
+    }
+  ],
+  "benefits_counted_in_net_income_nonzero": [
+    {
+      "variable": "wic",
+      "baseline": 723.727783203125,
+      "reform": 723.727783203125,
+      "change": 0.0,
+      "counted_in_household_net_income": true
+    },
+    {
+      "variable": "reduced_price_school_meals",
+      "baseline": 1013.2757568359375,
+      "reform": 1013.2757568359375,
+      "change": 0.0,
+      "counted_in_household_net_income": true
+    }
+  ],
+  "health_benefits_nonzero": [
+    {
+      "variable": "medicaid_cost",
+      "baseline": 17095.326171875,
+      "reform": 17095.326171875,
+      "change": 0.0,
+      "counted_in_household_net_income": false,
+      "by_person_baseline": [
+        0.0,
+        0.0,
+        8547.6630859375,
+        8547.6630859375
+      ]
+    },
+    {
+      "variable": "assigned_aca_ptc",
+      "baseline": 7793.7265625,
+      "reform": 7793.7265625,
+      "change": 0.0,
+      "counted_in_household_net_income": false,
+      "by_person_baseline": null
+    },
+    {
+      "variable": "medicaid",
+      "baseline": 17095.326171875,
+      "reform": 17095.326171875,
+      "change": 0.0,
+      "counted_in_household_net_income": false,
+      "by_person_baseline": [
+        0.0,
+        0.0,
+        8547.6630859375,
+        8547.6630859375
+      ]
+    }
+  ],
+  "health_note": "Medicaid/CHIP/ACA values are reported for context; with gov.simulation.include_health_benefits_in_net_income = False they are not added to household_net_income.",
+  "summary": {
+    "household_net_income_baseline": 59292.86328125,
+    "household_net_income_reform": 60892.859375,
+    "household_net_income_change": 1599.99609375,
+    "ctc_baseline": 4400.0,
+    "ctc_reform": 6000.0,
+    "ctc_change": 1600.0,
+    "ctc_value_baseline": 4400.0,
+    "ctc_value_reform": 6000.0,
+    "ctc_value_change": 1600.0,
+    "full_theoretical_gain": 1600.0,
+    "gets_full_gain": true,
+    "explanation": "The household gains the full 2 x $800 = $1,600. Baseline federal tax before credits is $2,840.00; the nonrefundable CTC absorbs that liability and the refundable portion (ACTC) covers the rest because the remaining credit ($3,160.00 under reform) stays below the refundable cap of $3,400 (2 x $1,700) and the earned-income phase-in amount of $8,625.00.",
+    "household_net_income_change_rounded_to_cents": 1600.0,
+    "float32_note": "policyengine-us stores values as float32. household_net_income is ~$60k, where float32 resolution is about $0.004, so the reform-minus-baseline difference prints as 1599.99609375 rather than exactly 1600; every credit component (ctc, ctc_value, refundable_ctc, household_refundable_tax_credits) changes by exactly 1600.0.",
+    "spm_poverty_baseline": false,
+    "spm_poverty_reform": false
+  },
+  "checks": {
+    "second_method": "policyengine_us.Simulation(situation=..., reform=...) with the same people, OH, JOINT, national SPM",
+    "variables_compared": [
+      "employment_income",
+      "adjusted_gross_income",
+      "taxable_income",
+      "income_tax_before_credits",
+      "ctc",
+      "ctc_value",
+      "non_refundable_ctc",
+      "refundable_ctc",
+      "ctc_limiting_tax_liability",
+      "ctc_refundable_maximum",
+      "ctc_phase_in",
+      "eitc",
+      "income_tax",
+      "employee_payroll_tax",
+      "state_income_tax",
+      "snap",
+      "household_benefits",
+      "household_refundable_tax_credits",
+      "household_tax_before_refundable_credits",
+      "household_health_costs",
+      "household_net_income"
+    ],
+    "raw_baseline": {
+      "employment_income": 60000.0,
+      "adjusted_gross_income": 60000.0,
+      "taxable_income": 27800.0,
+      "income_tax_before_credits": 2840.0,
+      "ctc": 4400.0,
+      "ctc_value": 4400.0,
+      "non_refundable_ctc": 2840.0,
+      "refundable_ctc": 1560.0,
+      "ctc_limiting_tax_liability": 2840.0,
+      "ctc_refundable_maximum": 3400.0,
+      "ctc_phase_in": 8625.0,
+      "eitc": 1242.2958984375,
+      "income_tax": -2802.2958984375,
+      "employee_payroll_tax": 4590.0,
+      "state_income_tax": 656.4382934570312,
+      "snap": 0.0,
+      "household_benefits": 1737.0035400390625,
+      "household_refundable_tax_credits": 2802.2958984375,
+      "household_tax_before_refundable_credits": 5246.4384765625,
+      "household_health_costs": 0.0,
+      "household_net_income": 59292.86328125
+    },
+    "raw_reform": {
+      "employment_income": 60000.0,
+      "adjusted_gross_income": 60000.0,
+      "taxable_income": 27800.0,
+      "income_tax_before_credits": 2840.0,
+      "ctc": 6000.0,
+      "ctc_value": 6000.0,
+      "non_refundable_ctc": 2840.0,
+      "refundable_ctc": 3160.0,
+      "ctc_limiting_tax_liability": 2840.0,
+      "ctc_refundable_maximum": 3400.0,
+      "ctc_phase_in": 8625.0,
+      "eitc": 1242.2958984375,
+      "income_tax": -4402.2958984375,
+      "employee_payroll_tax": 4590.0,
+      "state_income_tax": 656.4382934570312,
+      "snap": 0.0,
+      "household_benefits": 1737.0035400390625,
+      "household_refundable_tax_credits": 4402.2958984375,
+      "household_tax_before_refundable_credits": 5246.4384765625,
+      "household_health_costs": 0.0,
+      "household_net_income": 60892.859375
+    },
+    "mismatches_over_1_cent": [],
+    "match": true,
+    "spm_geography_sensitivity": {
+      "note": "Same family with county_fips 39049 (Franklin County, OH) and county-mode SPM. NOT the reported household; shows net income does not depend on the SPM geography choice.",
+      "household_net_income_baseline": 59292.86328125,
+      "household_net_income_reform": 60892.859375,
+      "identical_to_reported": true
+    }
+  }
+}

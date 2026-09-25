@@ -1,0 +1,42 @@
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+income_tax_weighted_change -31268857951.06516
+income_tax_baseline_total 2610499432897.5215
+ctc_value_weighted_change 31269290759.11712
+ctc_value_baseline_total 133396712251.4632
+ctc_weighted_change 53284814121.523026
+ctc_baseline_total 157468351520.51172
+state_income_tax_weighted_change 19902689.16708197
+state_income_tax_baseline_total 613774053735.7474
+household_net_income_weighted_change 31248955940.019867
+household_net_income_baseline_total 17426396654706.508
+federal_budget_cost_2026_usd 31268857951.06516
+households_total_weighted 124557998.60092863
+people_total_weighted 345685947.2612134
+share_households_gaining_over_1usd 0.19235133879326063
+share_people_in_gaining_households_hhweight_x_count 0.2903072321099196
+spm_child_rate_baseline 0.17419475962506567
+spm_child_rate_reform 0.17176613457986922
+spm_children_lifted_out 189305.6811650619
+spm_all_rate_baseline 0.13634485653845452
+spm_all_rate_reform 0.13527811472403728
+{'started_at_utc': '2026-09-25T02:19:08.559583+00:00', 'finished_at_utc': '2026-09-25T02:38:51.046988+00:00', 'wall_clock_seconds': 1182.47, 'laps_seconds': {'imports': 21.37, 'hash': 0.68, 'construct': 21.62, 'aggregates': 850.27, 'poverty': 288.42}}
+     1195.36 real       646.87 user        63.84 sys
+         29425090560  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+            16795406  page reclaims
+                 211  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                  15  messages sent
+                  40  messages received
+                   0  signals received
+               43883  voluntary context switches
+             2168113  involuntary context switches
+       9451570291434  instructions retired
+       3023827450932  cycles elapsed
+        163868184232  peak memory footprint
+EXIT 0

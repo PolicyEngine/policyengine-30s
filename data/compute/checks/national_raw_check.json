@@ -1,0 +1,75 @@
+{
+  "meta": {
+    "description": "Second-path national check: policyengine_us.Microsimulation directly on the bundle dataset.",
+    "reform": {
+      "parameter": "gov.irs.credits.ctc.amount.base[0].amount",
+      "yaml_path": "policyengine_us/parameters/gov/irs/credits/ctc/amount/base.yaml (bracket 0 amount)",
+      "baseline_value_2026": 2200,
+      "reform_value": 3000,
+      "period": "2026-01-01.2026-12-31",
+      "nothing_else_changes": true
+    },
+    "reform_dict_passed": {
+      "gov.irs.credits.ctc.amount.base[0].amount": {
+        "2026-01-01.2026-12-31": 3000
+      }
+    },
+    "dataset_path": "/Users/maxghenis/PolicyEngine/policyengine-30s/data/pe_data/populace_us_2024.h5",
+    "dataset_sha256": "6496cc4393d4d3c6574f76eca231de5898c803b9067645591fd5c4d3e65aee84",
+    "dataset_uri": "hf://policyengine/populace-us/populace_us_2024.h5@populace-us-2024-spm-20260915",
+    "spm_config": {
+      "forecast_content_sha256": "3d86d5c4c0423480e6b69b75d222ffa4a7a2639e4094df5ba2504af01be17173",
+      "scenario": "ce_trend",
+      "geography_kind": "county",
+      "geography_id": null,
+      "county_vintage": "2020",
+      "as_of": null
+    },
+    "versions": {
+      "policyengine": "6.1.1",
+      "policyengine-us": "2.2.1",
+      "policyengine-core": "3.32.5",
+      "spm-calculator": "1.0.0",
+      "microdf-python": "1.3.10",
+      "numpy": "2.5.3",
+      "pandas": "3.0.6",
+      "h5py": "3.16.0",
+      "tables": "3.11.1",
+      "python": "3.13.9",
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+    },
+    "runtime": {
+      "started_at_utc": "2026-09-25T02:19:08.559583+00:00",
+      "finished_at_utc": "2026-09-25T02:38:51.046988+00:00",
+      "wall_clock_seconds": 1182.47,
+      "laps_seconds": {
+        "imports": 21.37,
+        "hash": 0.68,
+        "construct": 21.62,
+        "aggregates": 850.27,
+        "poverty": 288.42
+      }
+    },
+    "script": "compute/national_raw_check.py"
+  },
+  "income_tax_weighted_change": -31268857951.06516,
+  "income_tax_baseline_total": 2610499432897.5215,
+  "ctc_value_weighted_change": 31269290759.11712,
+  "ctc_value_baseline_total": 133396712251.4632,
+  "ctc_weighted_change": 53284814121.523026,
+  "ctc_baseline_total": 157468351520.51172,
+  "state_income_tax_weighted_change": 19902689.16708197,
+  "state_income_tax_baseline_total": 613774053735.7474,
+  "household_net_income_weighted_change": 31248955940.019867,
+  "household_net_income_baseline_total": 17426396654706.508,
+  "federal_budget_cost_2026_usd": 31268857951.06516,
+  "households_total_weighted": 124557998.60092863,
+  "people_total_weighted": 345685947.2612134,
+  "share_households_gaining_over_1usd": 0.19235133879326063,
+  "share_people_in_gaining_households_hhweight_x_count": 0.2903072321099196,
+  "spm_child_rate_baseline": 0.17419475962506567,
+  "spm_child_rate_reform": 0.17176613457986922,
+  "spm_children_lifted_out": 189305.6811650619,
+  "spm_all_rate_baseline": 0.13634485653845452,
+  "spm_all_rate_reform": 0.13527811472403728
+}

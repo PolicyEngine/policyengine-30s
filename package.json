@@ -1,0 +1,28 @@
+{
+  "name": "policyengine-30s",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build site/main.js --outfile site/bundle.js --format iife",
+    "data": "uv run --with pyyaml tools/adapt_outputs.py && uv run --with pyyaml tools/build_video_data.py",
+    "score": "node tools/render.mjs --stills 12 --out frames/probe --events audio/events.json && uv run --with numpy --with scipy --with pyloudnorm tools/soundtrack.py audio/events.json audio/score.wav",
+    "determinism": "node tools/determinism.mjs 1920x1080 && node tools/determinism.mjs 1080x1920",
+    "render": "./tools/render_all.sh",
+    "check": "uv run --with numpy tools/check_outputs.py out/policyengine-30s-4k60.mp4 out/policyengine-30s-1080p60.mp4 out/policyengine-30s-vertical-1080x1920.mp4",
+    "serve": "node tools/serve.mjs 4317",
+    "test": "bunx vitest run && uv run --with pytest --with hypothesis --with numpy --with scipy --with pyloudnorm --with pyyaml pytest -m 'not slow'"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/newsreader": "^5.3.0",
+    "d3-geo": "^3.1.1",
+    "playwright": "^1.63.0",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1"
+  },
+  "devDependencies": {
+    "fast-check": "^4.10.2",
+    "vitest": "^5.0.2"
+  }
+}

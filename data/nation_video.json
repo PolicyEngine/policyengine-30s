@@ -1,0 +1,55 @@
+{
+ "caption": [
+  "Now all ",
+  "50 states and DC."
+ ],
+ "stats": [
+  {
+   "kind": "billion",
+   "value": 31,
+   "digits": 0,
+   "what": "federal cost in 2026"
+  },
+  {
+   "kind": "pct",
+   "value": 19.2,
+   "digits": 1,
+   "what": "of households gain"
+  },
+  {
+   "kind": "count",
+   "value": 189300.0,
+   "what": "fewer children in poverty"
+  }
+ ],
+ "dotNote": "Each dot: a household drawn by weight, placed at random in its assigned congressional district",
+ "draws": {
+  "n": 12000,
+  "unique": 6976
+ },
+ "dotMax": 3200,
+ "households": 124557998.60092863,
+ "deciles": {
+  "avg": [
+   6,
+   73,
+   131,
+   234,
+   330,
+   377,
+   448,
+   402,
+   430,
+   257
+  ],
+  "caption": [
+   "Average change per household",
+   "\nby income decile"
+  ]
+ },
+ "raw": {
+  "cost": 31193255593.887222,
+  "share": 0.19226182079131385,
+  "children_lifted_out": 189305.68809461594
+ }
+}

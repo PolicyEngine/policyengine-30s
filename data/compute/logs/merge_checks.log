@@ -1,0 +1,14 @@
+federal_budget_cost_2026_usd                             31,193,255,593.887222  31,268,857,951.065159 rel 0.00242367639217344
+household_net_income_total_change                        31,173,279,982.649040  31,248,955,940.019867 rel 0.002427590468919143
+ctc_value_change                                         31,361,208,740.216385  31,269,290,759.117119 rel -0.002930945100384286
+ctc_allowed_change                                       53,284,814,121.523026  53,284,814,121.523026 rel 0.0
+state_income_tax_revenue_change                              19,976,387.479747      19,902,689.167082 rel -0.003689271282909205
+households_total_weighted                                   124,557,998.600929     124,557,998.600929 rel 0.0
+people_total_weighted                                       345,685,947.261213     345,685,947.261213 rel 0.0
+share_households_gaining_over_1usd                                    0.192262               0.192351 rel 0.0004656046716833706
+share_people_in_gaining_households_hhweight_x_count                   0.290248               0.290307 rel 0.00020477849845161307
+spm_child_rate_baseline                                               0.174195               0.174195 rel -3.6091550628682363e-09
+spm_child_rate_reform                                                 0.171766               0.171766 rel -3.1426209044869886e-09
+spm_children_lifted_out                                         189,305.688095         189,305.681165 rel -3.660510212316981e-08
+spm_all_rate_baseline                                                 0.136329               0.136345 rel 0.00011321570090212755
+spm_all_rate_reform                                                   0.135263               0.135278 rel 0.00011410879045459297

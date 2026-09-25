@@ -1,0 +1,29 @@
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+WARNING:policyengine.core.cache:Memory usage has reached 9.98GB (threshold: 8GB). Cache contains 2 items.
+budget cost (federal income tax revenue change): -31193255593.887222
+net income total change: 31173279982.64904
+ctc_value change: 31361208740.216385 ctc change: 53284814121.523026
+households: 124557998.60092863 share gaining: 0.19226182079131385 people share: 0.2902477956021573
+child spm: {'rate_baseline': 0.17419476025376157, 'rate_reform': 0.17176613511966507, 'headcount_baseline': 13578076.949525833, 'headcount_reform': 13388771.261431217, 'population': 77947677.24210365, 'children_lifted_out': 189305.68809461594, 'rate_change_pp': -0.24286251340965015, 'relative_change': -0.013942010256557402, 'filter': "age <= 17 (policyengine.py AGE_GROUPS['child'])"}
+all spm: {'rate_baseline': 0.1363294219073997, 'rate_reform': 0.13526268006322162, 'headcount_baseline': 47127165.35163308, 'headcount_reform': 46758407.68674521, 'population': 345685947.2612134, 'people_lifted_out': 368757.66488786787, 'rate_change_pp': -0.10667418441780707, 'relative_change': -0.007824736797480471}
+deciles: [5.95, 73.01, 130.53, 234.02, 330.27, 377.4, 448.08, 401.85, 430.41, 257.32]
+runtime: {'started_at_utc': '2026-09-25T02:16:36.663707+00:00', 'finished_at_utc': '2026-09-25T02:40:11.913466+00:00', 'wall_clock_seconds': 1415.23, 'laps_seconds': {'imports': 31.66, 'hash_source_dataset': 0.51, 'ensure_datasets_year_2026': 8.52, 'economic_impact_analysis': 1374.12, 'child_poverty': 0.08, 'aggregates': 0.03, 'sample': 0.04}}
+     1424.91 real       771.47 user        61.82 sys
+         30896160768  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+            16363003  page reclaims
+                1878  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                  15  messages sent
+                  39  messages received
+                   0  signals received
+               50935  voluntary context switches
+             2431022  involuntary context switches
+      11231778345638  instructions retired
+       3538609397341  cycles elapsed
+         98146129472  peak memory footprint
+EXIT 0

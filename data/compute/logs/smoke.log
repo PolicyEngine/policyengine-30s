@@ -1,0 +1,8 @@
+budget cost (federal income tax revenue change): -107237217.43282403
+net income total change: 107237177.67327705
+ctc_value change: 107237215.97050978 ctc change: 169041761.4462161
+households: 474310.81566961476 share gaining: 0.20334163753924328 people share: 0.3156046138494468
+child spm: {'rate_baseline': 0.18034575720022597, 'rate_reform': 0.18034572473284458, 'headcount_baseline': 51109.11702657037, 'headcount_reform': 51109.107825471205, 'population': 283395.172805908, 'children_lifted_out': 0.009201099164783955, 'rate_change_pp': -3.2467381394507555e-06, 'relative_change': -1.8002852907962326e-07, 'filter': "age <= 17 (policyengine.py AGE_GROUPS['child'])"}
+all spm: {'rate_baseline': 0.1643491072207818, 'rate_reform': 0.16434909362249336, 'headcount_baseline': 222409.23027681292, 'headcount_reform': 222409.2118746146, 'population': 1353273.1271733337, 'people_lifted_out': 0.01840219832956791, 'rate_change_pp': -1.3598288439720108e-06, 'relative_change': -8.274026351389036e-08}
+deciles: [0.22, 128.99, 27.54, 398.88, 275.36, 707.41, 66.9, 394.25, 274.06, 268.83]
+runtime: {'started_at_utc': '2026-09-25T02:20:09.532322+00:00', 'finished_at_utc': '2026-09-25T02:21:05.595724+00:00', 'wall_clock_seconds': 56.06, 'laps_seconds': {'imports': 20.13, 'hash_source_dataset': 0.42, 'ensure_datasets_year_2026': 1.28, 'economic_impact_analysis': 34.08, 'child_poverty': 0.06, 'aggregates': 0.0, 'sample': 0.02}}

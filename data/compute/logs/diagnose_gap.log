@@ -1,0 +1,56 @@
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+WARNING:root:The dataset contains 189 column(s) that do not match any variable in the tax-benefit system and were ignored: ACTC_CRD, AGI, ANN_VAL, A_AGE, A_ENRLW, A_EXPRRP, A_FAMREL, A_FAMTYP, A_FNLWGT, A_FTPT, … (179 more)
+n_flagged_tax_units                                                         1.280000e+02
+weighted_flagged_tax_units                                                  2.030429e+05
+weighted_gap_usd                                                           -1.679531e+08
+subset_households                                                           1.280000e+02
+pepy_share_itemizing_baseline                                               9.531250e-01
+pepy_share_limiting_liability_exceeds_income_tax_before_credits_baseline    9.531250e-01
+pepy_mean_limiting_minus_actual_before_credits                              1.541939e+03
+pepy_weighted_minus_d_income_tax                                            2.381248e+08
+pepy_weighted_d_ctc_value                                                   4.060781e+08
+raw_weighted_minus_d_income_tax                                             3.961143e+08
+raw_weighted_d_ctc_value                                                    3.965473e+08
+raw_share_itemizing_baseline                                                9.531250e-01
+raw_mean_limiting_minus_actual_before_credits                              -2.100622e+02
+dtype: float64
+income_tax                                  4359.469727
+income_tax_before_credits                      0.000000
+income_tax_capped_non_refundable_credits       0.000061
+ctc                                            0.000000
+ctc_value                                    296.486816
+refundable_ctc                              4359.469727
+ctc_limiting_tax_liability                  7484.711914
+tax_unit_itemizes                              0.000000
+salt_deduction                                 0.000000
+itemized_taxable_income_deductions             0.000000
+standard_deduction                             0.000000
+taxable_income                                 0.000000
+dtype: float64
+    tax_unit_id  pepy_b.income_tax_before_credits  pepy_b.ctc_limiting_tax_liability  raw_b.ctc_limiting_tax_liability  pepy_b.tax_unit_itemizes  raw_b.tax_unit_itemizes  pepy_b.salt_deduction  pepy_b.income_tax  raw_b.income_tax  \
+0         24552                       4456.853516                        4421.208008                       3943.921387                       1.0                      1.0            3977.392334           0.000000       -456.078613   
+1         26223                       7149.585938                        6872.850586                       5779.888672                       1.0                      1.0            6754.018555        1379.888672       1379.888672   
+2         43679                      15497.140625                       16808.017578                      15497.140625                       1.0                      1.0            5958.533203        2297.140625       2297.140625   
+3         44819                       4551.736816                        4941.974609                       4551.736816                       1.0                      1.0            3251.980225           0.000000       -348.263184   
+4         69590                       3014.265137                        3022.639893                       2814.265137                       1.0                      1.0            2170.573242         614.265137        614.265137   
+5        121320                       5290.365234                        6007.321289                       5290.365234                       1.0                      1.0            5974.630859         390.365234        390.365234   
+6        131439                       2474.044434                        2770.280029                       2474.044434                       1.0                      1.0            2478.555420         274.044434        274.044434   
+7        147386                       6946.840332                        7525.763672                       6946.840332                       1.0                      1.0            4824.366699         346.840332        346.840332   
+8        166942                       5447.020020                        5737.961914                       5447.020020                       1.0                      1.0            2424.516602        1047.020020       1047.020020   
+9        174299                       8152.979492                        8536.478516                       8152.979492                       1.0                      1.0            3195.824951        1552.979492       1552.979492   
+10      1003210                       2841.649414                        3770.800537                       2841.649414                       1.0                      1.0            7742.923828         641.649414        641.649414   
+11      1004688                       5991.396484                        7191.610352                       5991.396484                       1.0                      1.0           10001.782227        1091.396484       1091.396484   
+
+    pepy_r.income_tax  raw_r.income_tax  
+0        -1578.791992      -2056.078613  
+1            0.000000       -220.111328  
+2        -1191.982422      -2502.859375  
+3        -1558.025391      -1948.263184  
+4            0.000000       -185.734863  
+5         -492.678711      -1209.634766  
+6         -229.719971       -525.955566  
+7        -1474.236328      -2053.159668  
+8         -262.038086       -552.979980  
+9         -463.521484       -847.020508  
+10           0.000000       -158.350586  
+11           0.000000       -508.603516  

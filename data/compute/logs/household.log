@@ -1,0 +1,4 @@
+net baseline 59292.86328125 reform 60892.859375 change 1599.99609375
+ctc 4400.0 6000.0 ctc_value 4400.0 6000.0
+match: True []
+The household gains the full 2 x $800 = $1,600. Baseline federal tax before credits is $2,840.00; the nonrefundable CTC absorbs that liability and the refundable portion (ACTC) covers the rest because the remaining credit ($3,160.00 under reform) stays below the refundable cap of $3,400 (2 x $1,700) and the earned-income phase-in amount of $8,625.00.
