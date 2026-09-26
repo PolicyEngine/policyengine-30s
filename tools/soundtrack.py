@@ -25,7 +25,7 @@ import wave
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import butter, fftconvolve, sosfilt
+from scipy.signal import butter, fftconvolve, lfilter, sosfilt
 
 SR = 48000
 DUR = 30.0
@@ -124,6 +124,65 @@ def verb(x, wet=0.3):
     return x * (1 - wet) + out * wet * 1.6
 
 
+# ------------------------------------------------------------------ loudness
+# ITU-R BS.1770 K-weighting at 48 kHz (high-shelf pre-filter, then the RLB high-pass), so
+# levels below track perceived loudness rather than raw power: a hiss at 5 kHz reads louder
+# than a pad of the same RMS
+assert SR == 48000, "the K-weighting coefficients below are for 48 kHz"
+K_WEIGHT = [
+    ([1.53512485958697, -2.69169618940638, 1.19839281085285], [1.0, -1.69065929318241, 0.73248077421585]),
+    ([1.0, -2.0, 1.0], [1.0, -1.99004745483398, 0.99007225036621]),
+]
+MOMENT = int(0.4 * SR)   # BS.1770 momentary window
+HOP = int(0.01 * SR)
+
+
+def k_weight(x):
+    for b, a in K_WEIGHT:
+        x = lfilter(b, a, x, axis=1)
+    return x
+
+
+def momentary(x, i0, i1):
+    """K-weighted loudness (LUFS, ungated) of every 400 ms window starting in [i0, i1), 10 ms apart.
+
+    Filters from 0.5 s before i0 so the high-pass has settled."""
+    pre = min(i0, int(0.5 * SR))
+    y = k_weight(x[:, i0 - pre: i1 + MOMENT]) ** 2
+    c = np.concatenate([np.zeros((2, 1)), np.cumsum(y, axis=1)], axis=1)
+    starts = np.arange(pre, pre + (i1 - i0), HOP)
+    ms = ((c[:, starts + MOMENT] - c[:, starts]) / MOMENT).sum(0)
+    return i0 - pre + starts, -0.691 + 10 * np.log10(ms + 1e-20)
+
+
+# Noise sweeps (whooshes, and the noise inside the riser and the swell) are levelled
+# against whatever else is playing: at the sweep's loudest 400 ms, it sits SWEEP_UNDER LU
+# below the rest of the mix. A fixed gain made the same whoosh 8 LU over the quiet intro
+# and 2 LU over the busier bridge; both read as too loud.
+SWEEP_UNDER = 6.0
+
+
+def level_sweeps(bed, sweeps, report=None):
+    """Scale each sweep (a full-length stereo buffer plus its reverb send) to SWEEP_UNDER LU
+    under bed at the sweep's loudest moment; return their sum."""
+    out = np.zeros_like(bed)
+    for buf, wet, t in sweeps:
+        x = verb(buf, wet) if wet else buf
+        # windows lie inside the sweep itself: a riser's window must not reach the hit it
+        # leads into, where the limiter would squash the bed and skew the comparison
+        nz = np.flatnonzero(np.abs(buf).sum(0))
+        i0, i1 = nz[0], max(nz[0] + 1, nz[-1] + 1 - MOMENT)
+        at, ls = momentary(x, i0, i1)
+        k = int(np.argmax(ls))
+        _, lb = momentary(bed, at[k], at[k] + 1)
+        g = 10 ** ((lb[0] - SWEEP_UNDER - ls[k]) / 20)
+        out += x * g
+        if report is not None:
+            report.append({"t": t, "window_start": int(at[k]), "gain_db": float(20 * np.log10(g)),
+                           "sweep_lufs": float(ls[k] + 20 * np.log10(g)), "bed_lufs": float(lb[0])})
+    return out
+
+
 # ------------------------------------------------------------------ harmony
 # D minor, four chords per 8-second cycle: Dm - Bb - F - C (i - VI - III - VII)
 CHORDS = [
@@ -220,11 +279,15 @@ def noise_sweep(dur, f0, f1, q=0.5):
 
 
 # ------------------------------------------------------------------ build
-def build(events):
+def build(events, report=None):
+    """The stereo score for the timeline events. Pass a list as report to receive the sweep levels."""
     mus = np.zeros((2, N))   # music bus (gets ducked by the kick)
     drm = np.zeros((2, N))   # drums
     sfx = np.zeros((2, N))   # effects
-    dry = np.zeros((2, N))   # transition sweeps: kept out of the reverb so they don't mask the cues
+    sweeps = []              # noise sweeps, levelled against the finished bed (see level_sweeps)
+
+    def sweep_buf():
+        return np.zeros((2, N))
     duck = np.ones(N)
 
     # sections: 0 intro, 1 code, 2 family, 3 nation, 4 deciles, 5 outro
@@ -340,8 +403,11 @@ def build(events):
         elif kind == "whoosh":
             d = e.get("dur", 0.8) + 0.1
             env_w = env_adsr(int(d * SR), a=d * 0.85, d=0.02, s=1.0, r=0.06)
-            place(dry, noise_sweep(d, 300, 7000) * env_w * 0.5, t - 0.1, 1.0, -0.45)
-            place(dry, noise_sweep(d, 300, 7000) * env_w * 0.5, t - 0.1, 1.0, 0.45)
+            # dry (no reverb) so it doesn't mask the cues; tops out at 5 kHz, not 7, to hiss less
+            b = sweep_buf()
+            place(b, noise_sweep(d, 250, 5000) * env_w, t - 0.1, 1.0, -0.45)
+            place(b, noise_sweep(d, 250, 5000) * env_w, t - 0.1, 1.0, 0.45)
+            sweeps.append((b, 0.0, t))
         elif kind == "land":
             n = int(0.5 * SR)
             thump = np.tanh(2.5 * np.sin(2 * np.pi * 110 * t_axis(n)) * exp_decay(n, 0.08)) * 0.6
@@ -388,7 +454,9 @@ def build(events):
                 sos = butter(2, fc / (SR / 2), "low", output="sos")
                 out[s0: s0 + blk], zi = sosfilt(sos, v[s0: s0 + blk], zi=zi)
             place(sfx, out * np.linspace(0, 1, n) ** 2 * 0.3, t, 1.0)
-            place(sfx, noise_sweep(d, 400, 9000) * np.linspace(0, 1, n) ** 2 * 0.2, t, 1.0)
+            b = sweep_buf()
+            place(b, noise_sweep(d, 400, 9000) * np.linspace(0, 1, n) ** 2, t, 1.0)
+            sweeps.append((b, 0.32, t))
         elif kind == "hit":
             n = int(2.5 * SR)
             boom = np.sin(2 * np.pi * np.cumsum(38 + 60 * exp_decay(n, 0.05)) / SR) * exp_decay(n, 0.5)
@@ -417,8 +485,10 @@ def build(events):
         elif kind == "swell":
             d = e["dur"] - 0.03
             n = int(d * SR)
-            x = noise_sweep(d, 800, 12000) * np.linspace(0, 1, n) ** 3 * env_adsr(n, a=0.001, d=0.001, s=1.0, r=0.04) * 0.35
-            place(sfx, x, t, 1.0)
+            x = noise_sweep(d, 800, 12000) * np.linspace(0, 1, n) ** 3 * env_adsr(n, a=0.001, d=0.001, s=1.0, r=0.04)
+            b = sweep_buf()
+            place(b, x, t, 1.0)
+            sweeps.append((b, 0.32, t))
         elif kind == "logo":
             n = int(4.0 * SR)
             boom = np.sin(2 * np.pi * np.cumsum(36 + 50 * exp_decay(n, 0.06)) / SR) * exp_decay(n, 1.1)
@@ -442,7 +512,8 @@ def build(events):
     tail[b2:] = 0
     sfx *= tail[None, :]
 
-    mix = verb(mus, 0.28) + verb(drm, 0.08) + verb(sfx, 0.32) + 0.5 * dry
+    bed = verb(mus, 0.28) + verb(drm, 0.08) + verb(sfx, 0.32)
+    mix = bed + level_sweeps(bed, sweeps, report)
     # gentle master: glue + soft clip, then normalize loudness to ~-14 LUFS (RMS proxy)
     mix = hp(mix, 30)
     import pyloudnorm as pyln
@@ -458,7 +529,6 @@ def build(events):
         la = int(0.003 * SR)
         g = np.minimum.reduce([np.roll(g, -k) for k in range(la)])
         rel = np.exp(-1 / (0.12 * SR))
-        from scipy.signal import lfilter
         # release smoothing (attack instant): track min with exponential recovery
         out = np.empty_like(g); cur = 1.0
         for i in range(len(g)):
