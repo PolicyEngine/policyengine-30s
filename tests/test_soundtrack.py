@@ -125,7 +125,8 @@ def test_every_sweep_sits_under_the_music_around_it(score):
         i, w = r["window_start"], r["window_len"]
         under = _loudness(stems["bed_pre"], i, w) - _loudness(stems["sweeps_pre"], i, w)
         assert abs(under - sd.SWEEP_UNDER) < 0.05, (r, under)
-        assert e["t"] - 0.1 - 1e-9 <= i / sd.SR and (i + w) / sd.SR <= e["t"] + e.get("dur", 0.8) + 1e-9, (r, e)
+        one = 1 / sd.SR  # place() rounds the start to a sample
+        assert e["t"] - 0.1 - one <= i / sd.SR and (i + w) / sd.SR <= e["t"] + e.get("dur", 0.8) + one, (r, e)
 
 
 def test_the_window_is_the_sweeps_loudest(score):
@@ -151,13 +152,16 @@ def test_mastered_stems_are_the_score(score):
 
 def test_sweeps_sit_under_the_music_in_the_mastered_score(score):
     """The same margin through the master's shared gain envelope, bounded on both sides so a
-    muted or halved sweep fails as surely as a loud one. The limiter trims the swell's margin
-    to about 4.6 LU: a kick and clap at 25.5 s share its window."""
-    _, _, report, stems = score
-    for r in report:
+    muted or halved sweep fails as surely as a loud one. Where the limiter works inside a
+    sweep's window it trims the margin: the swell shares its window with a kick and clap at
+    25.5 s and lands near 4.6 LU; every other sweep stays within half an LU of 6."""
+    events, _, report, stems = score
+    kinds = [e["type"] for e in events if e["type"] in SWEEPS]
+    for r, kind in zip(report, kinds):
         i, w = r["window_start"], r["window_len"]
         under = _loudness(stems["bed"], i, w) - _loudness(stems["sweeps"], i, w)
-        assert 4.0 <= under <= sd.SWEEP_UNDER + 0.3, (r["t"], under)
+        floor = 4.3 if kind == "swell" else sd.SWEEP_UNDER - 0.5
+        assert floor <= under <= sd.SWEEP_UNDER + 0.3, (r["t"], kind, under)
 
 
 @settings(max_examples=15, deadline=None)
@@ -200,7 +204,8 @@ def test_levelling_ignores_the_sweep_gain_and_follows_the_bed(bed_db, sweep_db, 
     c = sd.level_sweeps(bed * 2.0, [(buf, wet, t)])
     i, w = rep1[0]["window_start"], rep1[0]["window_len"]
     assert w == min(sd.MOMENT, int(dur * sd.SR))
-    _, lb = sd.momentary(bed, i, i + 1, w)
+    wb = min(sd.MOMENT, i + w)  # the bed is measured over the 400 ms ending with the sweep's window
+    _, lb = sd.momentary(bed, i + w - wb, i + w - wb + 1, wb)
     _, la = sd.momentary(a, i, i + 1, w)
     assert abs(lb[0] - la[0] - sd.SWEEP_UNDER) < 1e-6
     assert np.allclose(a, b, atol=1e-12 + 1e-9 * np.abs(a).max())
@@ -221,10 +226,10 @@ def test_what_plays_after_a_sweep_cannot_set_its_level(dur, t, boost_db):
     assert np.allclose(a, b, atol=1e-12 + 1e-9 * np.abs(a).max())
 
 
-@pytest.mark.parametrize("t", [29.2, 29.7, 29.9, 29.999, 30.5, -2.0])
+@pytest.mark.parametrize("t", [29.2, 29.7, 29.9, 29.999, 30.5, -2.0, -0.5])
 def test_sweeps_at_the_edges_of_the_score_render(t):
-    """A sweep cut off by the end of the score is levelled over what remains; one wholly
-    outside it is dropped. Neither may crash the render."""
+    """A sweep cut off by either end of the score is levelled over what remains, still exactly
+    SWEEP_UNDER below the bed; one wholly outside it is dropped. Neither may crash the render."""
     bed = sd.bp(np.random.default_rng(3).standard_normal((2, sd.N)), 100, 6000) * 0.1
     buf = np.zeros((2, sd.N))
     sd.place(buf, sd.bp(np.random.default_rng(4).standard_normal(int(0.9 * sd.SR)), 300, 5000), t, 1.0)
@@ -233,5 +238,17 @@ def test_sweeps_at_the_edges_of_the_score_render(t):
     assert np.isfinite(out).all()
     if not buf.any():
         assert rep == [] and not out.any()
-    else:
-        assert len(rep) == 1 and out.any()
+        return
+    assert len(rep) == 1 and out.any()
+    i, w = rep[0]["window_start"], rep[0]["window_len"]
+    wb = min(sd.MOMENT, i + w)
+    _, lb = sd.momentary(bed, i + w - wb, i + w - wb + 1, wb)
+    _, la = sd.momentary(out, i, i + 1, w)
+    assert abs(lb[0] - la[0] - sd.SWEEP_UNDER) < 1e-6
+
+
+def test_momentary_refuses_windows_that_do_not_fit():
+    x = np.zeros((2, 1000))
+    for i0, i1, w in ((0, 10, 995), (-1, 3, 10), (5, 5, 10), (0, 3, 0)):
+        with pytest.raises(ValueError):
+            sd.momentary(x, i0, i1, w)

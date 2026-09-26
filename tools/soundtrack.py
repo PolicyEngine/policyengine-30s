@@ -147,7 +147,8 @@ def momentary(x, i0, i1, w=MOMENT):
     in [i0, i1); the windows must end inside x (i1 - 1 + w <= x.shape[1]).
 
     Filters from up to 0.5 s before i0 so the high-pass has settled."""
-    assert 0 <= i0 < i1 and i1 - 1 + w <= x.shape[1], (i0, i1, w, x.shape)
+    if not (0 < w and 0 <= i0 < i1 and i1 - 1 + w <= x.shape[1]):
+        raise ValueError(f"windows [{i0}, {i1}) of {w} samples do not fit a signal of {x.shape[1]}")
     pre = min(i0, int(0.5 * SR))
     y = k_weight(x[:, i0 - pre: i1 - 1 + w]) ** 2
     c = np.concatenate([np.zeros((2, 1)), np.cumsum(y, axis=1)], axis=1)
@@ -170,7 +171,9 @@ def level_sweeps(bed, sweeps, report=None):
     Every candidate window lies inside the sweep itself, one per sample: a riser's window must
     not reach the hit it leads into (the limiter would squash the bed and skew the comparison),
     and a sweep shorter than 400 ms is measured over its own length, so nothing that plays
-    after it can set its level. A sweep placed wholly outside the score is dropped."""
+    after it can set its level. For such a sweep the bed is still measured over 400 ms, the
+    window that ends where the sweep's does, so one drum hit in a 50 ms slice can't swing it.
+    A sweep placed wholly outside the score is dropped."""
     out = np.zeros_like(bed)
     for buf, wet, t in sweeps:
         nz = np.flatnonzero(np.abs(buf).sum(0))
@@ -181,7 +184,8 @@ def level_sweeps(bed, sweeps, report=None):
         x = verb(buf, wet) if wet else buf
         at, ls = momentary(x, i0, end - w + 1, w)
         k = int(np.argmax(ls))
-        _, lb = momentary(bed, int(at[k]), int(at[k]) + 1, w)
+        wb = min(MOMENT, int(at[k]) + w)          # bed window: 400 ms ending with the sweep's
+        _, lb = momentary(bed, int(at[k]) + w - wb, int(at[k]) + w - wb + 1, wb)
         g = 10 ** ((lb[0] - SWEEP_UNDER - ls[k]) / 20)
         out += x * g
         if report is not None:
