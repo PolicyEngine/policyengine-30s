@@ -351,7 +351,9 @@ function build() {
   legendDots.innerHTML = V.nation.dotNote;
   css(legendDots, { left: L.legend.x + "px", top: L.legend.y + "px", width: (VERT ? 936 : 1200) + "px" });
   // what the national figures are computed with, in the scene's bottom-right corner
-  srcNation = sourceTag(V.sources?.nation, VERT ? { right: L.margin, bottom: 340 } : { right: L.margin, bottom: 44 });
+  // portrait: it may wrap, within the free right column beside the third stat
+  srcNation = sourceTag(V.sources?.nation, VERT ? { right: L.margin, bottom: 340, maxWidth: 540 } : { right: L.margin, bottom: 44 });
+  if (VERT) srcNation.style.whiteSpace = "normal";
 
   if (V.deciles) {
     capDist = buildCaption(V.deciles.caption.map((c, i) => [c, i % 2 ? "t" : ""]), "", stage);
@@ -731,7 +733,8 @@ function buildMap() {
 // A chart's small print: which model and data produced it, right-aligned in its corner.
 function sourceTag(lines, pos) {
   const d = el("div", "src", stage);
-  d.innerHTML = (lines || []).join("<br>");
+  // one block per statement, so a statement that wraps balances its own lines
+  d.innerHTML = (lines || []).map((s) => `<div>${s}</div>`).join("");
   css(d, Object.fromEntries(Object.entries(pos).map(([k, v]) => [k, v + "px"])));
   return d;
 }
