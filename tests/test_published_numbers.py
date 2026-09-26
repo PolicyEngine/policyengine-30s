@@ -67,12 +67,20 @@ def test_reform_card_is_what_policyengine_received(video):
     assert r["to"] == meta["reform"]["reform_value"] == 3000
 
 
-def test_provenance_names_the_versions_that_ran(video, national):
+def test_source_tags_name_the_versions_that_ran(video, national):
+    """Each chart's small print names the run that produced it: the curve the household sweep,
+    the map, stats and deciles the national run and its dataset. The close carries none."""
+    sweep = load("earnings_sweep.json")["meta"]["versions"]
     v = national["meta"]["versions"]
-    assert f"policyengine.py {v['policyengine']}" in video["provenance"][0]
-    assert f"policyengine-us {v['policyengine-us']}" in video["provenance"][0]
-    smp = load("households_sample.json")["meta"]
-    assert f"{smp['n_draws']:,} weighted draws of {smp['unique_households_drawn']:,}" in video["provenance"][2]
+    ds = national["meta"]["dataset"]["default_dataset"]
+    src = video["sources"]
+    assert src["curve"] == [f"policyengine.py {sweep['policyengine']} · static"]
+    assert src["nation"] == [f"policyengine.py {v['policyengine']} · {ds} · static", "poverty: Supplemental Poverty Measure"]
+    assert src["deciles"] == [f"policyengine.py {v['policyengine']} · {ds} · static"]
+    # the child poverty stat on screen is the SPM figure the tag names
+    child = national["poverty"]["spm"]["children_under_18"]["children_lifted_out"]
+    assert video["nation"]["stats"][2]["value"] == round(child, -2)
+    assert "provenance" not in video
 
 
 def test_sample_dots_have_valid_geography(video):
