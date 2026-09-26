@@ -51,19 +51,21 @@ def code_block():
     }
 
 
-def provenance(year):
-    n = load("national.json")
-    if not n:
-        return ["MOCK provenance"]
-    v = n["meta"]["versions"]
+def sources():
+    """Each chart's small print, from the versions the runs recorded. The curve comes from the
+    household sweep; the map, the stats and the deciles from the national run on the dataset."""
+    n, sw = load("national.json"), load("earnings_sweep.json")
+    if not n or not sw:
+        return {"curve": ["MOCK"], "nation": ["MOCK"], "deciles": ["MOCK"]}
     ds = n["meta"]["dataset"]["default_dataset"]
-    nv = load("nation_video.json") or {}
-    dr = nv.get("draws") or {}
-    return [
-        f"policyengine.py {v['policyengine']} · policyengine-us {v['policyengine-us']} · dataset {ds}",
-        f"Tax year {year} · static, no behavioral responses · poverty: Supplemental Poverty Measure",
-        f"Map: {dr.get('n', 12000):,} weighted draws of {dr.get('unique') or 0:,} distinct households",
-    ]
+    run = lambda v: f"policyengine.py {v['policyengine']}"
+    national = f"{run(n['meta']['versions'])} · {ds} · static"
+    return {
+        "curve": [f"{run(sw['meta']['versions'])} · static"],
+        # the official poverty measure ignores tax credits, so the child poverty figure needs its measure named
+        "nation": [national, "poverty: Supplemental Poverty Measure"],
+        "deciles": [national],
+    }
 
 
 def cd_geometry():
@@ -102,7 +104,7 @@ def main():
         "cdGeo": cd_geometry(),
         "code": code,
         "signoff": 'Free and open source · <b>policyengine.org</b>',
-        "provenance": provenance(int(rperiod[:4])),
+        "sources": sources(),
     }
 
     st = load("statute.json")

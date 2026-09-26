@@ -8,7 +8,7 @@ plink lands on the frame that causes it:
   pour   the statute pours in         word   quote words appear
   whoosh camera dive / token flight   lock   the $2,200 box locks
   ping   citation / reform value      key    code lines type in
-  land   $2,200 lands in the code    curve  the family's gain drawn across earnings (pitch = gain)
+  land   $2,200 lands in the code    curve  the family's gain drawn across earnings (brightness = gain)
   rise   into the second fact        hit    "+$1,600 from $58,000" lands
   drop   zoom out to the nation      plink  households light up ($800 step = pitch)
   stat   a statistic lands           decile a decile bar grows (pitch = height)
@@ -25,7 +25,7 @@ import wave
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import butter, fftconvolve, sosfilt
+from scipy.signal import butter, fftconvolve, lfilter, sosfilt
 
 SR = 48000
 DUR = 30.0
@@ -124,6 +124,76 @@ def verb(x, wet=0.3):
     return x * (1 - wet) + out * wet * 1.6
 
 
+# ------------------------------------------------------------------ loudness
+# ITU-R BS.1770 K-weighting at 48 kHz (high-shelf pre-filter, then the RLB high-pass), so
+# levels below track perceived loudness rather than raw power: a hiss at 5 kHz reads louder
+# than a pad of the same RMS
+assert SR == 48000, "the K-weighting coefficients below are for 48 kHz"
+K_WEIGHT = [
+    ([1.53512485958697, -2.69169618940638, 1.19839281085285], [1.0, -1.69065929318241, 0.73248077421585]),
+    ([1.0, -2.0, 1.0], [1.0, -1.99004745483398, 0.99007225036621]),
+]
+MOMENT = int(0.4 * SR)   # BS.1770 momentary window
+
+
+def k_weight(x):
+    for b, a in K_WEIGHT:
+        x = lfilter(b, a, x, axis=1)
+    return x
+
+
+def momentary(x, i0, i1, w=MOMENT):
+    """K-weighted loudness (LUFS, ungated) of every w-sample window starting at each sample
+    in [i0, i1); the windows must end inside x (i1 - 1 + w <= x.shape[1]).
+
+    Filters from up to 0.5 s before i0 so the high-pass has settled."""
+    if not (0 < w and 0 <= i0 < i1 and i1 - 1 + w <= x.shape[1]):
+        raise ValueError(f"windows [{i0}, {i1}) of {w} samples do not fit a signal of {x.shape[1]}")
+    pre = min(i0, int(0.5 * SR))
+    y = k_weight(x[:, i0 - pre: i1 - 1 + w]) ** 2
+    c = np.concatenate([np.zeros((2, 1)), np.cumsum(y, axis=1)], axis=1)
+    starts = pre + np.arange(i1 - i0)
+    ms = ((c[:, starts + w] - c[:, starts]) / w).sum(0)
+    return i0 + np.arange(i1 - i0), -0.691 + 10 * np.log10(ms + 1e-20)
+
+
+# Noise sweeps (whooshes, and the noise inside the riser and the swell) are levelled
+# against whatever else is playing: at the sweep's loudest 400 ms, it sits SWEEP_UNDER LU
+# below the rest of the mix. A fixed gain made the same whoosh 8 LU over the quiet intro
+# and 2 LU over the busier bridge; both read as too loud.
+SWEEP_UNDER = 6.0
+
+
+def level_sweeps(bed, sweeps, report=None):
+    """Scale each sweep (a full-length stereo buffer plus its reverb send) to SWEEP_UNDER LU
+    under bed at the sweep's loudest moment; return their sum.
+
+    Every candidate window lies inside the sweep itself, one per sample: a riser's window must
+    not reach the hit it leads into (the limiter would squash the bed and skew the comparison),
+    and a sweep shorter than 400 ms is measured over its own length, so nothing that plays
+    after it can set its level. For such a sweep the bed is still measured over 400 ms, the
+    window that ends where the sweep's does, so one drum hit in a 50 ms slice can't swing it.
+    A sweep placed wholly outside the score is dropped."""
+    out = np.zeros_like(bed)
+    for buf, wet, t in sweeps:
+        nz = np.flatnonzero(np.abs(buf).sum(0))
+        if nz.size == 0:
+            continue
+        i0, end = int(nz[0]), int(nz[-1]) + 1
+        w = min(MOMENT, end - i0)
+        x = verb(buf, wet) if wet else buf
+        at, ls = momentary(x, i0, end - w + 1, w)
+        k = int(np.argmax(ls))
+        wb = min(MOMENT, int(at[k]) + w)          # bed window: 400 ms ending with the sweep's
+        _, lb = momentary(bed, int(at[k]) + w - wb, int(at[k]) + w - wb + 1, wb)
+        g = 10 ** ((lb[0] - SWEEP_UNDER - ls[k]) / 20)
+        out += x * g
+        if report is not None:
+            report.append({"t": t, "window_start": int(at[k]), "window_len": w, "gain_db": float(20 * np.log10(g)),
+                           "sweep_lufs": float(ls[k] + 20 * np.log10(g)), "bed_lufs": float(lb[0])})
+    return out
+
+
 # ------------------------------------------------------------------ harmony
 # D minor, four chords per 8-second cycle: Dm - Bb - F - C (i - VI - III - VII)
 CHORDS = [
@@ -182,12 +252,19 @@ def pluck(m, dur=0.28, bright=1.0):
     return out * exp_decay(n, dur / 3.2) * 0.25
 
 
-def bell(m, dur=1.2):
+def felt(m, dur=0.9):
+    """A soft felted mallet: mostly fundamental, a little second harmonic that dies fast,
+    a short muffled contact noise, and a low-pass so nothing sparkles."""
     n = int(dur * SR)
     f = midi(m)
     t = t_axis(n)
-    mod = np.sin(2 * np.pi * f * 3.5 * t) * 2.2 * exp_decay(n, 0.25)
-    return np.sin(2 * np.pi * f * t + mod) * exp_decay(n, dur / 4) * 0.22
+    tone = (np.sin(2 * np.pi * f * t)
+            + 0.3 * np.sin(4 * np.pi * f * t) * exp_decay(n, 0.06)
+            + 0.06 * np.sin(6 * np.pi * f * t) * exp_decay(n, 0.03))
+    x = tone * (1 - np.exp(-t / 0.004)) * exp_decay(n, 0.22)
+    k = int(0.012 * SR)
+    x[:k] += bp(rng.standard_normal(k), 600, 2400) * exp_decay(k, 0.003) * 0.25
+    return lp(x, 2400) * 0.2
 
 
 def pad_voice(m, n, detune=0.12):
@@ -213,11 +290,18 @@ def noise_sweep(dur, f0, f1, q=0.5):
 
 
 # ------------------------------------------------------------------ build
-def build(events):
+def build(events, report=None, stems=None):
+    """The stereo score for the timeline events. Pass a list as report to receive the sweep
+    levels, and a dict as stems to receive the bed and the levelled sweeps both before the
+    master ("bed_pre", "sweeps_pre") and after it ("bed", "sweeps"). The master is a filter
+    and one gain envelope shared by both, so the mastered stems sum to the score."""
     mus = np.zeros((2, N))   # music bus (gets ducked by the kick)
     drm = np.zeros((2, N))   # drums
     sfx = np.zeros((2, N))   # effects
-    dry = np.zeros((2, N))   # transition sweeps: kept out of the reverb so they don't mask the cues
+    sweeps = []              # noise sweeps, levelled against the finished bed (see level_sweeps)
+
+    def sweep_buf():
+        return np.zeros((2, N))
     duck = np.ones(N)
 
     # sections: 0 intro, 1 code, 2 family, 3 nation, 4 deciles, 5 outro
@@ -329,43 +413,51 @@ def build(events):
             x = bp(rng.standard_normal(n), 1800, 6000) * exp_decay(n, 0.008) * 0.25
             place(sfx, x, t, 1.0, rng.uniform(-0.3, 0.3))
         elif kind == "lock":
-            place(sfx, bell(74, 1.4), t, 0.9)
+            place(sfx, felt(62, 1.0), t, 0.7)
         elif kind == "whoosh":
             d = e.get("dur", 0.8) + 0.1
             env_w = env_adsr(int(d * SR), a=d * 0.85, d=0.02, s=1.0, r=0.06)
-            place(dry, noise_sweep(d, 300, 7000) * env_w * 0.5, t - 0.1, 1.0, -0.45)
-            place(dry, noise_sweep(d, 300, 7000) * env_w * 0.5, t - 0.1, 1.0, 0.45)
+            # dry (no reverb) so it doesn't mask the cues; tops out at 5 kHz, not 7, to hiss less
+            b = sweep_buf()
+            place(b, noise_sweep(d, 250, 5000) * env_w, t - 0.1, 1.0, -0.45)
+            place(b, noise_sweep(d, 250, 5000) * env_w, t - 0.1, 1.0, 0.45)
+            sweeps.append((b, 0.0, t))
         elif kind == "land":
             n = int(0.5 * SR)
             thump = np.tanh(2.5 * np.sin(2 * np.pi * 110 * t_axis(n)) * exp_decay(n, 0.08)) * 0.6
             place(sfx, thump, t, 0.9)
             k = int(0.04 * SR)
             place(sfx, np.sin(2 * np.pi * 1320 * t_axis(k)) * exp_decay(k, 0.008) * 0.5, t, 1.0)
-            place(sfx, bell(81, 0.8), t, 0.9)
         elif kind == "key":
             n = int(0.03 * SR)
             lo, hi_ = (2500, 6000) if e["i"] % 2 == 0 else (4000, 9000)
             x = bp(rng.standard_normal(n), lo, hi_) * exp_decay(n, 0.005) * 0.25
             place(sfx, x, t + rng.uniform(-0.008, 0.008), 1.0, rng.uniform(-0.5, 0.5))
         elif kind == "ping":
-            place(sfx, bell(PENTA[e.get("note", 0) % len(PENTA)] + 12, 1.0), t, 0.8)
+            place(sfx, felt(PENTA[e.get("note", 0) % len(PENTA)], 0.9), t, 0.6)
         elif kind == "tick":
             n = int(0.04 * SR)
             f = midi(74 + e["k"] * 0.75)
             x = np.sin(2 * np.pi * f * t_axis(n)) * exp_decay(n, 0.012) * 0.35
             place(sfx, x, t, 1.0, -0.2 + e["k"] * 0.025)
         elif kind == "curve":
-            # a glide whose pitch follows the computed gain as the curve draws: flat and
-            # low while the family gains $0, rising as income tax absorbs the extra credit, steady at the top
+            # the held chord opens as the computed gain rises: dark while the family gains $0,
+            # brightening as income tax absorbs the extra credit, fully open at the top
             sm = np.array(e["samples"], dtype=float)
+            assert sm.ndim == 2 and np.isfinite(sm).all() and np.isfinite(e["gmax"]) and e["gmax"] > 0, "bad curve cue"
             t0, t1 = sm[0, 0], sm[-1, 0]
             n = int((t1 - t0 + 0.25) * SR)
             tt = t0 + t_axis(n)
-            g = np.interp(tt, sm[:, 0], sm[:, 1]) / e["gmax"]
-            f = midi(62 + 12 * g)                      # D4 at $0 up to D5 at the full gain
-            amp = (0.35 + 0.65 * g) * env_adsr(n, a=0.08, d=0.05, s=1.0, r=0.3)
-            x = np.sin(2 * np.pi * np.cumsum(f) / SR) + 0.25 * np.sin(4 * np.pi * np.cumsum(f) / SR)
-            place(sfx, x * amp * 0.16, t0, 1.0, 0.2)
+            # clamped so a gain beyond gmax can never push the cutoff past Nyquist
+            g = np.clip(np.interp(tt, sm[:, 0], sm[:, 1]) / e["gmax"], 0.0, 1.0)
+            v = sum(pad_voice(m + 12, n) for m in CHORDS[chord_at(t0)]) / 4
+            out = np.zeros(n); zi = np.zeros((1, 2)); blk = 128
+            for s0 in range(0, n, blk):
+                fc = 350 * (2600 / 350) ** g[s0]           # 350 Hz at $0, 2.6 kHz at the full gain
+                sos = butter(2, fc / (SR / 2), "low", output="sos")
+                out[s0: s0 + blk], zi = sosfilt(sos, v[s0: s0 + blk], zi=zi)
+            amp = (0.5 + 0.5 * g) * env_adsr(n, a=0.12, d=0.05, s=1.0, r=0.3)
+            place(sfx, out * amp * 0.22, t0, 1.0, 0.2)
         elif kind == "rise":
             d = e["dur"]
             n = int(d * SR)
@@ -376,7 +468,9 @@ def build(events):
                 sos = butter(2, fc / (SR / 2), "low", output="sos")
                 out[s0: s0 + blk], zi = sosfilt(sos, v[s0: s0 + blk], zi=zi)
             place(sfx, out * np.linspace(0, 1, n) ** 2 * 0.3, t, 1.0)
-            place(sfx, noise_sweep(d, 400, 9000) * np.linspace(0, 1, n) ** 2 * 0.2, t, 1.0)
+            b = sweep_buf()
+            place(b, noise_sweep(d, 400, 9000) * np.linspace(0, 1, n) ** 2, t, 1.0)
+            sweeps.append((b, 0.32, t))
         elif kind == "hit":
             n = int(2.5 * SR)
             boom = np.sin(2 * np.pi * np.cumsum(38 + 60 * exp_decay(n, 0.05)) / SR) * exp_decay(n, 0.5)
@@ -395,18 +489,20 @@ def build(events):
             # G5 -> D6 -> A6: one child's worth, two, three or more; fits both Dm and C
             m = [79, 86, 93][min(3, max(1, step)) - 1]
             g = min(0.6, 0.12 + 0.02 * np.sqrt(nlit))
-            place(sfx, bell(m, 0.9), t, g, rng.uniform(-0.7, 0.7))
+            place(sfx, felt(m - 12, 0.7), t, 0.8 * g, rng.uniform(-0.7, 0.7))
         elif kind == "stat":
-            place(sfx, bell(74 + 5 * e["i"], 1.0), t, 0.6)
+            place(sfx, felt(62 + 5 * e["i"], 0.9), t, 0.5)
         elif kind == "decile":
             FPENT = [65, 67, 69, 72, 74, 77, 79, 81, 84]
             m = FPENT[int(round(e.get("v", (e["n"] - 3) / 9) * (len(FPENT) - 1)))]
-            place(sfx, bell(m, 0.8), t, 0.38, -0.6 + 0.12 * (e["n"] - 3))
+            place(sfx, felt(m - 12, 0.8), t, 0.3, -0.6 + 0.12 * (e["n"] - 3))
         elif kind == "swell":
             d = e["dur"] - 0.03
             n = int(d * SR)
-            x = noise_sweep(d, 800, 12000) * np.linspace(0, 1, n) ** 3 * env_adsr(n, a=0.001, d=0.001, s=1.0, r=0.04) * 0.35
-            place(sfx, x, t, 1.0)
+            x = noise_sweep(d, 800, 12000) * np.linspace(0, 1, n) ** 3 * env_adsr(n, a=0.001, d=0.001, s=1.0, r=0.04)
+            b = sweep_buf()
+            place(b, x, t, 1.0)
+            sweeps.append((b, 0.32, t))
         elif kind == "logo":
             n = int(4.0 * SR)
             boom = np.sin(2 * np.pi * np.cumsum(36 + 50 * exp_decay(n, 0.06)) / SR) * exp_decay(n, 1.1)
@@ -414,8 +510,6 @@ def build(events):
             for m in [53, 57, 60, 65, 69, 72]:  # F major, open voicing: the resolve
                 v = pad_voice(m, n) * exp_decay(n, 1.0)
                 place(sfx, lp(v, 3000), t, 0.16, rng.uniform(-0.5, 0.5))
-            for j, m in enumerate([77, 81, 84, 89]):
-                place(sfx, bell(m, 2.5), t + j * 0.09, 0.4, -0.3 + 0.2 * j)
 
     # sidechain duck on the music bus
     mus *= duck[None, :]
@@ -432,15 +526,19 @@ def build(events):
     tail[b2:] = 0
     sfx *= tail[None, :]
 
-    mix = verb(mus, 0.28) + verb(drm, 0.08) + verb(sfx, 0.32) + 0.5 * dry
+    bed = verb(mus, 0.28) + verb(drm, 0.08) + verb(sfx, 0.32)
+    air = level_sweeps(bed, sweeps, report)
+    mix = bed + air
     # gentle master: glue + soft clip, then normalize loudness to ~-14 LUFS (RMS proxy)
     mix = hp(mix, 30)
+    env = np.ones(N)   # the master's gain envelope, tracked for the stems
     import pyloudnorm as pyln
     from scipy.signal import resample_poly
     meter = pyln.Meter(SR)
     for _ in range(3):
         L = meter.integrated_loudness(mix.T)
         mix *= 10 ** ((-14.0 - L) / 20)
+        env *= 10 ** ((-14.0 - L) / 20)
         # true-peak limiter: 4x oversampled peak detector, 3 ms lookahead, 120 ms release
         pk = np.abs(resample_poly(mix, 4, 1, axis=1)).max(0).reshape(-1, 4).max(1)[: mix.shape[1]]
         ceil = 10 ** (-2.0 / 20)
@@ -448,17 +546,21 @@ def build(events):
         la = int(0.003 * SR)
         g = np.minimum.reduce([np.roll(g, -k) for k in range(la)])
         rel = np.exp(-1 / (0.12 * SR))
-        from scipy.signal import lfilter
         # release smoothing (attack instant): track min with exponential recovery
         out = np.empty_like(g); cur = 1.0
         for i in range(len(g)):
             cur = g[i] if g[i] < cur else g[i] + (cur - g[i]) * rel
             out[i] = cur
         mix *= out[None, :]
+        env *= out
     # 30 ms fade in/out at the edges to avoid clicks
     edge = int(0.03 * SR)
     mix[:, :edge] *= np.linspace(0, 1, edge)
     mix[:, -edge:] *= np.linspace(1, 0, edge)
+    env[:edge] *= np.linspace(0, 1, edge)
+    env[-edge:] *= np.linspace(1, 0, edge)
+    if stems is not None:
+        stems.update(bed_pre=bed, sweeps_pre=air, bed=hp(bed, 30) * env, sweeps=hp(air, 30) * env)
     return mix
 
 

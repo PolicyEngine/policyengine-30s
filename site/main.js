@@ -40,9 +40,9 @@ const T = {
   famIn: 8.5,
   chartIn: 8.8,
   curveA: 9.1, curveB: 10.9,        // the curve draws across earnings, left to right
-  riseA: 10.65, riseB: 11.45,
-  line1: 11.0, line2: 11.5,         // "$0 below …" then "+$1,600 from …" on the beat
-  noteIn: 11.9,
+  riseA: 11.0, riseB: 11.95,        // riser over beats 3-4, drums and bass out
+  line1: 11.0, line2: 12.0,         // "+$1,600 from …" and its hit on the downbeat, never on beat 4
+  noteIn: 12.15,
   famOut: 13.75,
   zoomA: 14.0, zoomB: 16.3,
   rippleA: 14.9, rippleB: 16.6,
@@ -85,7 +85,7 @@ let code, codeLines, codeVal, codeRefLine, token, tokA, tokB;
 let cap1, cap2, capNation, capDist, reform, reformLines, reformVal;
 let famWrap, famSvg, famDesc, chart, chartSvg, curvePath, playhead, pinEl, lineEls, noteEl, reformChip;
 let statEls, legendDots;
-let logoImg, tagEl, urlEl, provEl, mockBanner;
+let logoImg, tagEl, urlEl, mockBanner, srcNation, srcDeciles;
 let cv, ctx, grainCv, grainCtx;
 let M = {};             // cached measurements
 let dots = [];          // population sample
@@ -310,6 +310,11 @@ function build() {
     <path class="curve" d="${d}"/>
     <circle class="ph" r="9"/>
   </svg>`;
+  // source tag: on the axis-title line in landscape; a line below the chart in portrait,
+  // where the narrower chart would run it into "Earnings"
+  const srcCurve = el("div", "src", chart);
+  srcCurve.innerHTML = (V.sources?.curve || []).join("<br>");
+  css(srcCurve, { right: padR + "px", top: (VERT ? C.h + 10 : C.h - 27) + "px", opacity: 1 });
   chartSvg = chart.querySelector("svg");
   curvePath = chart.querySelector(".curve");
   playhead = chart.querySelector(".ph");
@@ -345,6 +350,10 @@ function build() {
   legendDots = el("div", "sub", stage);
   legendDots.innerHTML = V.nation.dotNote;
   css(legendDots, { left: L.legend.x + "px", top: L.legend.y + "px", width: (VERT ? 936 : 1200) + "px" });
+  // what the national figures are computed with, in the scene's bottom-right corner
+  // portrait: it may wrap, within the free right column beside the third stat
+  srcNation = sourceTag(V.sources?.nation, VERT ? { right: L.margin, bottom: 340, maxWidth: 540 } : { right: L.margin, bottom: 44 });
+  if (VERT) srcNation.style.whiteSpace = "normal";
 
   if (V.deciles) {
     capDist = buildCaption(V.deciles.caption.map((c, i) => [c, i % 2 ? "t" : ""]), "", stage);
@@ -354,6 +363,7 @@ function build() {
       barAx.push(el("div", "barx", stage, String(i + 1)));
     }
     axEnds = [el("div", "barend", stage, "Lowest income"), el("div", "barend", stage, "Highest income")];
+    srcDeciles = sourceTag(V.sources?.deciles, {});  // placed under the bars in buildDeciles
   }
 
   // --- scene 6: sign-off
@@ -363,9 +373,6 @@ function build() {
   tagEl.textContent = "Computing public policy for everyone.";
   urlEl = el("div", "", stage); urlEl.id = "url";
   urlEl.innerHTML = V.signoff;
-  provEl = el("div", "note prov", stage);
-  provEl.innerHTML = (V.provenance || []).map((s) => (VERT ? s.replace(/ · (?=dataset|poverty)/g, "<br>") : s)).join("<br>");
-  css(provEl, { left: "50%", bottom: (VERT ? 340 : 90) + "px", transform: "translateX(-50%)", whiteSpace: VERT ? "normal" : "nowrap", width: VERT ? "940px" : "auto", textAlign: "center" });
 
   // --- finishing layers
   grainCv = el("canvas", "layer", stage); grainCv.id = "grain";
@@ -723,6 +730,15 @@ function buildMap() {
   for (const d of dots) d.lightT = T.rippleA + ((d.step - 1) / 2) * span * 0.75 + d.j * 0.35;
 }
 
+// A chart's small print: which model and data produced it, right-aligned in its corner.
+function sourceTag(lines, pos) {
+  const d = el("div", "src", stage);
+  // one block per statement, so a statement that wraps balances its own lines
+  d.innerHTML = (lines || []).map((s) => `<div>${s}</div>`).join("");
+  css(d, Object.fromEntries(Object.entries(pos).map(([k, v]) => [k, v + "px"])));
+  return d;
+}
+
 function buildDeciles() {
   if (!V.deciles) return;
   const [[bx0, by0], [bx1, by1]] = L.chart;
@@ -743,6 +759,7 @@ function buildDeciles() {
   });
   css(axEnds[0], { left: bars[0].x + "px", top: by1 + 58 + "px" });
   css(axEnds[1], { left: bars[9].x + bars[9].w + "px", top: by1 + 58 + "px", transform: "translateX(-100%)" });
+  css(srcDeciles, { right: W - (bars[9].x + bars[9].w) + "px", top: by1 + 58 + 46 + "px" });
 }
 
 function buildLogoPoints() {
@@ -918,6 +935,7 @@ function scene45(t) {
   });
   const ld = env(t, T.zoomA + 0.8, T.zoomA + 1.2, T.hexA - 0.1, T.hexA + 0.3);
   css(legendDots, { opacity: ld });
+  srcNation.style.opacity = env(t, T.stat1, T.stat1 + 0.4, T.hexA - 0.15, T.hexA + 0.25);
 
   if (capDist) {
     const dvis = t > T.hexA && t < T.logoA + 0.5;
@@ -932,6 +950,7 @@ function scene45(t) {
       css(barAx[i], { opacity: P(t, T.hexA + 0.3, T.hexA + 0.7) * (1 - out) });
     });
     for (const e of axEnds) e.style.opacity = P(t, T.hexA + 0.5, T.hexA + 0.9) * (1 - out);
+    srcDeciles.style.opacity = P(t, T.hexA + 0.7, T.hexA + 1.1) * (1 - out);
   }
 
   const rc = env(t, T.famIn + 0.3, T.famIn + 0.7, T.logoA - 0.3, T.logoA);
@@ -950,7 +969,6 @@ function scene6(t) {
   css(tagEl, { top: L.logo.cy + lh / 2 + 60 + "px", opacity: tp, transform: `translateY(${lerp(16, 0, tp)}px)` });
   const up = P(t, T.url, T.url + 0.6, E.outCubic);
   css(urlEl, { top: L.logo.cy + lh / 2 + 160 + "px", opacity: up, transform: `translateY(${lerp(12, 0, up)}px)` });
-  provEl.style.opacity = P(t, T.tag + 0.2, T.tag + 0.8);
 }
 
 function grain(t) {
