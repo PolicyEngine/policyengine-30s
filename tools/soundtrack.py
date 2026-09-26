@@ -134,7 +134,6 @@ K_WEIGHT = [
     ([1.0, -2.0, 1.0], [1.0, -1.99004745483398, 0.99007225036621]),
 ]
 MOMENT = int(0.4 * SR)   # BS.1770 momentary window
-HOP = int(0.01 * SR)
 
 
 def k_weight(x):
@@ -143,16 +142,18 @@ def k_weight(x):
     return x
 
 
-def momentary(x, i0, i1):
-    """K-weighted loudness (LUFS, ungated) of every 400 ms window starting in [i0, i1), 10 ms apart.
+def momentary(x, i0, i1, w=MOMENT):
+    """K-weighted loudness (LUFS, ungated) of every w-sample window starting at each sample
+    in [i0, i1); the windows must end inside x (i1 - 1 + w <= x.shape[1]).
 
-    Filters from 0.5 s before i0 so the high-pass has settled."""
+    Filters from up to 0.5 s before i0 so the high-pass has settled."""
+    assert 0 <= i0 < i1 and i1 - 1 + w <= x.shape[1], (i0, i1, w, x.shape)
     pre = min(i0, int(0.5 * SR))
-    y = k_weight(x[:, i0 - pre: i1 + MOMENT]) ** 2
+    y = k_weight(x[:, i0 - pre: i1 - 1 + w]) ** 2
     c = np.concatenate([np.zeros((2, 1)), np.cumsum(y, axis=1)], axis=1)
-    starts = np.arange(pre, pre + (i1 - i0), HOP)
-    ms = ((c[:, starts + MOMENT] - c[:, starts]) / MOMENT).sum(0)
-    return i0 - pre + starts, -0.691 + 10 * np.log10(ms + 1e-20)
+    starts = pre + np.arange(i1 - i0)
+    ms = ((c[:, starts + w] - c[:, starts]) / w).sum(0)
+    return i0 + np.arange(i1 - i0), -0.691 + 10 * np.log10(ms + 1e-20)
 
 
 # Noise sweeps (whooshes, and the noise inside the riser and the swell) are levelled
@@ -164,21 +165,27 @@ SWEEP_UNDER = 6.0
 
 def level_sweeps(bed, sweeps, report=None):
     """Scale each sweep (a full-length stereo buffer plus its reverb send) to SWEEP_UNDER LU
-    under bed at the sweep's loudest moment; return their sum."""
+    under bed at the sweep's loudest moment; return their sum.
+
+    Every candidate window lies inside the sweep itself, one per sample: a riser's window must
+    not reach the hit it leads into (the limiter would squash the bed and skew the comparison),
+    and a sweep shorter than 400 ms is measured over its own length, so nothing that plays
+    after it can set its level. A sweep placed wholly outside the score is dropped."""
     out = np.zeros_like(bed)
     for buf, wet, t in sweeps:
-        x = verb(buf, wet) if wet else buf
-        # windows lie inside the sweep itself: a riser's window must not reach the hit it
-        # leads into, where the limiter would squash the bed and skew the comparison
         nz = np.flatnonzero(np.abs(buf).sum(0))
-        i0, i1 = nz[0], max(nz[0] + 1, nz[-1] + 1 - MOMENT)
-        at, ls = momentary(x, i0, i1)
+        if nz.size == 0:
+            continue
+        i0, end = int(nz[0]), int(nz[-1]) + 1
+        w = min(MOMENT, end - i0)
+        x = verb(buf, wet) if wet else buf
+        at, ls = momentary(x, i0, end - w + 1, w)
         k = int(np.argmax(ls))
-        _, lb = momentary(bed, at[k], at[k] + 1)
+        _, lb = momentary(bed, int(at[k]), int(at[k]) + 1, w)
         g = 10 ** ((lb[0] - SWEEP_UNDER - ls[k]) / 20)
         out += x * g
         if report is not None:
-            report.append({"t": t, "window_start": int(at[k]), "gain_db": float(20 * np.log10(g)),
+            report.append({"t": t, "window_start": int(at[k]), "window_len": w, "gain_db": float(20 * np.log10(g)),
                            "sweep_lufs": float(ls[k] + 20 * np.log10(g)), "bed_lufs": float(lb[0])})
     return out
 
@@ -279,8 +286,11 @@ def noise_sweep(dur, f0, f1, q=0.5):
 
 
 # ------------------------------------------------------------------ build
-def build(events, report=None):
-    """The stereo score for the timeline events. Pass a list as report to receive the sweep levels."""
+def build(events, report=None, stems=None):
+    """The stereo score for the timeline events. Pass a list as report to receive the sweep
+    levels, and a dict as stems to receive the bed and the levelled sweeps both before the
+    master ("bed_pre", "sweeps_pre") and after it ("bed", "sweeps"). The master is a filter
+    and one gain envelope shared by both, so the mastered stems sum to the score."""
     mus = np.zeros((2, N))   # music bus (gets ducked by the kick)
     drm = np.zeros((2, N))   # drums
     sfx = np.zeros((2, N))   # effects
@@ -513,15 +523,18 @@ def build(events, report=None):
     sfx *= tail[None, :]
 
     bed = verb(mus, 0.28) + verb(drm, 0.08) + verb(sfx, 0.32)
-    mix = bed + level_sweeps(bed, sweeps, report)
+    air = level_sweeps(bed, sweeps, report)
+    mix = bed + air
     # gentle master: glue + soft clip, then normalize loudness to ~-14 LUFS (RMS proxy)
     mix = hp(mix, 30)
+    env = np.ones(N)   # the master's gain envelope, tracked for the stems
     import pyloudnorm as pyln
     from scipy.signal import resample_poly
     meter = pyln.Meter(SR)
     for _ in range(3):
         L = meter.integrated_loudness(mix.T)
         mix *= 10 ** ((-14.0 - L) / 20)
+        env *= 10 ** ((-14.0 - L) / 20)
         # true-peak limiter: 4x oversampled peak detector, 3 ms lookahead, 120 ms release
         pk = np.abs(resample_poly(mix, 4, 1, axis=1)).max(0).reshape(-1, 4).max(1)[: mix.shape[1]]
         ceil = 10 ** (-2.0 / 20)
@@ -535,10 +548,15 @@ def build(events, report=None):
             cur = g[i] if g[i] < cur else g[i] + (cur - g[i]) * rel
             out[i] = cur
         mix *= out[None, :]
+        env *= out
     # 30 ms fade in/out at the edges to avoid clicks
     edge = int(0.03 * SR)
     mix[:, :edge] *= np.linspace(0, 1, edge)
     mix[:, -edge:] *= np.linspace(1, 0, edge)
+    env[:edge] *= np.linspace(0, 1, edge)
+    env[-edge:] *= np.linspace(1, 0, edge)
+    if stems is not None:
+        stems.update(bed_pre=bed, sweeps_pre=air, bed=hp(bed, 30) * env, sweeps=hp(air, 30) * env)
     return mix
 
 
