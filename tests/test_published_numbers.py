@@ -81,6 +81,21 @@ def test_source_tags_name_the_versions_that_ran(video, national):
     child = national["poverty"]["spm"]["children_under_18"]["children_lifted_out"]
     assert video["nation"]["stats"][2]["value"] == round(child, -2)
     assert "provenance" not in video
+    # nothing below policyengine.org on the close, and the page draws every chart's tag
+    assert video["signoff"] == "Free and open source · <b>policyengine.org</b>"
+    main = (ROOT / "site" / "main.js").read_text()
+    for part in ("curve", "nation", "deciles"):
+        assert f"V.sources?.{part}" in main
+    assert "provenance" not in main
+
+
+def test_policyengine_py_reproduces_the_whole_curve(video):
+    """The curve's tag names policyengine.py: its household calculator, run over the same
+    earnings axis, matches the plotted change in net income at every point, to the cent."""
+    cc = load("compute/checks/curve_policyengine_py.json")
+    sweep = load("earnings_sweep.json")
+    assert cc["points"] == len(sweep["earnings"]) == 601 and cc["max_abs_diff_dollars"] < 0.01
+    assert video["sources"]["curve"][0].startswith(f"policyengine.py {cc['versions']['policyengine']} ")
 
 
 def test_sample_dots_have_valid_geography(video):

@@ -1,0 +1,40 @@
+{
+  "description": "policyengine.py pe.us.calculate_household with an earnings axis, at every point of earnings_sweep.json",
+  "points": 601,
+  "tolerance_dollars": 0.01,
+  "max_abs_diff_dollars": 0.00390625,
+  "versions": {
+    "policyengine": "6.1.1",
+    "policyengine-us": "2.2.1",
+    "policyengine-core": "3.32.5",
+    "spm-calculator": "1.0.0",
+    "microdf-python": "1.3.10",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "h5py": "3.16.0",
+    "tables": "3.11.1",
+    "python": "3.13.9",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  },
+  "sweep_versions": {
+    "policyengine": "6.1.1",
+    "policyengine-us": "2.2.1",
+    "policyengine-core": "3.32.5",
+    "spm-calculator": "1.0.0",
+    "microdf-python": "1.3.10",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "h5py": "3.16.0",
+    "tables": "3.11.1",
+    "python": "3.13.9",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  },
+  "runtime": {
+    "started_at_utc": "2026-09-27T19:26:35.112205+00:00",
+    "finished_at_utc": "2026-09-27T19:32:32.527723+00:00",
+    "wall_clock_seconds": 357.41,
+    "laps_seconds": {
+      "calculate_household": 357.35
+    }
+  }
+}
