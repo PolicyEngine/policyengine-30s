@@ -52,3 +52,9 @@ jobs:
       - run: bunx playwright install --with-deps chromium
       - run: bun run build
       - run: bun run determinism
+      - name: Keep the mismatched frames
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: determinism-frames
+          path: frames/determinism/

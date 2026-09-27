@@ -1,6 +1,7 @@
 // Every frame must depend only on t: a fresh page asked for time t has to match,
 // pixel for pixel, a page that played the film up to t. Streaming workers start
 // mid-film, so any state left over from earlier frames would show up here.
+import fs from "node:fs";
 import { chromium } from "playwright";
 import { serve } from "./serve.mjs";
 
@@ -27,7 +28,14 @@ for (const t of times) {
   const b = await fresh.screenshot();
   await fresh.close();
   const same = Buffer.compare(a, b) === 0;
-  if (!same) fails++;
+  if (!same) {
+    // keep both frames so a failure on another machine (CI) can be inspected
+    fails++;
+    fs.mkdirSync("frames/determinism", { recursive: true });
+    const tag = `${W}x${H}-${country}-t${t}`;
+    fs.writeFileSync(`frames/determinism/${tag}-played.png`, a);
+    fs.writeFileSync(`frames/determinism/${tag}-fresh.png`, b);
+  }
   console.log(`t=${t}s  ${same ? "identical" : "DIFFERS"}`);
   t0 = t;
 }
