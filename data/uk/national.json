@@ -1,0 +1,312 @@
+{
+ "meta": {
+  "description": "Personal allowance £15,000 in 2026-27, static, enhanced FRS 2024-25 uprated to 2026",
+  "reform": {
+   "parameter": "gov.hmrc.income_tax.allowances.personal_allowance.amount",
+   "value": 15000,
+   "start_date": "2026-01-01",
+   "end_date": "2026-12-31",
+   "note": "policyengine-uk labels fiscal year 2026-27 as 2026 and reads it at 2026-01-01"
+  },
+  "behavioral_responses": "none (static; no labour-supply elasticities set)",
+  "dataset": {
+   "key": "enhanced_frs_2024_25_2026",
+   "source": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.56.16",
+   "sha256": "e433e532b17bd8ce76030156285816e33d44e93edabd2204adbef71d19a68712",
+   "sha256_matches_policyengine_py_6_1_1_manifest": true,
+   "households": 52846,
+   "people": 113617
+  },
+  "versions": {
+   "policyengine": "6.1.1",
+   "policyengine-uk": "2.90.2",
+   "policyengine-core": "3.32.5",
+   "numpy": "2.5.3",
+   "python": "3.13.9"
+  },
+  "runtime_seconds": {
+   "imports": 7.2,
+   "dataset": 8.8,
+   "economic_impact_analysis": 26.1,
+   "child_poverty": 26.3,
+   "budget": 26.3,
+   "aggregates": 26.3,
+   "sample": 26.4
+  },
+  "script": "tools/uk/national.py",
+  "licence_note": "aggregates only; the underlying FRS microdata stay in data/uk/private/"
+ },
+ "budget": {
+  "income_tax_revenue_change": -22818476234.295597,
+  "national_insurance_revenue_change": 0.0,
+  "universal_credit_change": -599247945.5910938,
+  "household_net_income_total_change": 22127665046.25099,
+  "income_tax_baseline_total": 312350249802.0793,
+  "income_tax_reform_total": 289531773567.7837,
+  "policyengine_py_program_statistics": {
+   "income_tax": {
+    "baseline_total": 312350249802.0793,
+    "reform_total": 289531773567.7837,
+    "change": -22818476234.295593,
+    "is_tax": true
+   },
+   "national_insurance": {
+    "baseline_total": 53955449114.356995,
+    "reform_total": 53955449114.356995,
+    "change": 0.0,
+    "is_tax": true
+   },
+   "vat": {
+    "baseline_total": 312399226889.1178,
+    "reform_total": 312399226889.1178,
+    "change": 0.0,
+    "is_tax": true
+   },
+   "council_tax": {
+    "baseline_total": 52460724317.3744,
+    "reform_total": 52460724317.3744,
+    "change": 0.0,
+    "is_tax": true
+   },
+   "fuel_duty": {
+    "baseline_total": 23919678144.983494,
+    "reform_total": 23919678144.983494,
+    "change": 0.0,
+    "is_tax": true
+   },
+   "ni_employer": {
+    "baseline_total": 154449978627.4818,
+    "reform_total": 154449978627.4818,
+    "change": 0.0,
+    "is_tax": true
+   },
+   "universal_credit": {
+    "baseline_total": 79371998177.47772,
+    "reform_total": 78772750231.88663,
+    "change": -599247945.591095,
+    "is_tax": false
+   },
+   "child_benefit": {
+    "baseline_total": 17699471331.90087,
+    "reform_total": 17699471331.90087,
+    "change": 0.0,
+    "is_tax": false
+   },
+   "pension_credit": {
+    "baseline_total": 7512485773.083136,
+    "reform_total": 7432362708.9036045,
+    "change": -80123064.1795311,
+    "is_tax": false
+   },
+   "income_support": {
+    "baseline_total": 0.0,
+    "reform_total": 0.0,
+    "change": 0.0,
+    "is_tax": false
+   },
+   "tax_credits": {
+    "baseline_total": 0.0,
+    "reform_total": 0.0,
+    "change": 0.0,
+    "is_tax": false
+   },
+   "working_tax_credit": {
+    "baseline_total": 0.0,
+    "reform_total": 0.0,
+    "change": 0.0,
+    "is_tax": false
+   },
+   "child_tax_credit": {
+    "baseline_total": 0.0,
+    "reform_total": 0.0,
+    "change": 0.0,
+    "is_tax": false
+   },
+   "state_pension": {
+    "baseline_total": 127501481392.43416,
+    "reform_total": 127501481392.43416,
+    "change": 0.0,
+    "is_tax": false
+   }
+  },
+  "net_cost_2026_27_gbp": 22139105224.524967,
+  "gross_income_tax_cost_2026_27_gbp": 22818476234.295597,
+  "benefit_change_2026_27_gbp": -679371009.7706261,
+  "identity_gap_gbp": -11440178.273975372
+ },
+ "winners": {
+  "share_households_gaining_over_1gbp": 0.7591592204242643,
+  "share_households_losing_over_1gbp": 0.0006203235117452565,
+  "total_weighted_households": 31458548.317392394,
+  "losers": {
+   "records": 12,
+   "weighted_households": 19514.47716665268,
+   "largest_loss_gbp": 8334.431640625,
+   "change_among_losers_gbp": {
+    "income_tax": -5531.743782043457,
+    "universal_credit": -499.44500732421875,
+    "pension_credit": -1627.4709701538086,
+    "housing_benefit": -18205.5224609375
+   },
+   "note": "unweighted sums over the losing records; their means-tested benefits fall by more than their tax cut"
+  }
+ },
+ "deciles": {
+  "by_decile": [
+   {
+    "decile": 1,
+    "average_change_household_net_income": 167.86611660080598,
+    "baseline_mean": 16028.91793471578,
+    "reform_mean": 16196.784051316587,
+    "relative_change_percent": 1.0472704226480434
+   },
+   {
+    "decile": 2,
+    "average_change_household_net_income": 263.26384712749496,
+    "baseline_mean": 29258.562865858294,
+    "reform_mean": 29521.82671298579,
+    "relative_change_percent": 0.8997839310648321
+   },
+   {
+    "decile": 3,
+    "average_change_household_net_income": 340.79398716222204,
+    "baseline_mean": 37922.097620193854,
+    "reform_mean": 38262.891607356076,
+    "relative_change_percent": 0.8986686089346129
+   },
+   {
+    "decile": 4,
+    "average_change_household_net_income": 637.427229598492,
+    "baseline_mean": 46026.860114213225,
+    "reform_mean": 46664.28734381172,
+    "relative_change_percent": 1.384902702501865
+   },
+   {
+    "decile": 5,
+    "average_change_household_net_income": 765.7782773997387,
+    "baseline_mean": 52977.30378472493,
+    "reform_mean": 53743.08206212467,
+    "relative_change_percent": 1.4454836745023958
+   },
+   {
+    "decile": 6,
+    "average_change_household_net_income": 871.1331531322503,
+    "baseline_mean": 60811.931249120855,
+    "reform_mean": 61683.064402253105,
+    "relative_change_percent": 1.432503680180103
+   },
+   {
+    "decile": 7,
+    "average_change_household_net_income": 1067.1080970687763,
+    "baseline_mean": 71153.06716259354,
+    "reform_mean": 72220.17525966231,
+    "relative_change_percent": 1.4997359068588043
+   },
+   {
+    "decile": 8,
+    "average_change_household_net_income": 1315.88801736616,
+    "baseline_mean": 84471.92006213483,
+    "reform_mean": 85787.80807950099,
+    "relative_change_percent": 1.5577815875361127
+   },
+   {
+    "decile": 9,
+    "average_change_household_net_income": 1471.7890682078578,
+    "baseline_mean": 103650.2476427438,
+    "reform_mean": 105122.03671095165,
+    "relative_change_percent": 1.4199571170160081
+   },
+   {
+    "decile": 10,
+    "average_change_household_net_income": 1634.737228770915,
+    "baseline_mean": 185271.80155903051,
+    "reform_mean": 186906.53878780143,
+    "relative_change_percent": 0.8823454055149682
+   }
+  ],
+  "definition": "policyengine.py household_net_income deciles (economic_impact_analysis)"
+ },
+ "poverty": {
+  "absolute_bhc": {
+   "variable": "in_poverty_bhc",
+   "all_people": {
+    "rate_baseline": 0.1113578717675023,
+    "rate_reform": 0.10867467510910525,
+    "headcount_baseline": 7791653.77855204,
+    "headcount_reform": 7603911.869963422,
+    "people_lifted_out": 187741.90858861804
+   },
+   "children_under_18": {
+    "rate_baseline": 0.11781860110618698,
+    "rate_reform": 0.11393404579775586,
+    "headcount_baseline": 1815657.3666464686,
+    "headcount_reform": 1755793.9715995193,
+    "children_lifted_out": 59863.39504694939,
+    "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
+   }
+  },
+  "absolute_ahc": {
+   "variable": "in_poverty_ahc",
+   "all_people": {
+    "rate_baseline": 0.1446000016863812,
+    "rate_reform": 0.13896917078719553,
+    "headcount_baseline": 10117588.740117446,
+    "headcount_reform": 9723602.35949023,
+    "people_lifted_out": 393986.3806272149
+   },
+   "children_under_18": {
+    "rate_baseline": 0.1698131298285895,
+    "rate_reform": 0.16547586973547396,
+    "headcount_baseline": 2616925.147911817,
+    "headcount_reform": 2550085.2927005887,
+    "children_lifted_out": 66839.85521122813,
+    "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
+   }
+  },
+  "relative_bhc": {
+   "variable": "in_relative_poverty_bhc",
+   "all_people": {
+    "rate_baseline": 0.17044533603569245,
+    "rate_reform": 0.17259238708955563,
+    "headcount_baseline": 11925973.669215202,
+    "headcount_reform": 12076201.741923928,
+    "people_lifted_out": -150228.07270872593
+   },
+   "children_under_18": {
+    "rate_baseline": 0.1940056966906698,
+    "rate_reform": 0.20283538873148754,
+    "headcount_baseline": 2989747.536132455,
+    "headcount_reform": 3125818.540614009,
+    "children_lifted_out": -136071.00448155403,
+    "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
+   }
+  },
+  "relative_ahc": {
+   "variable": "in_relative_poverty_ahc",
+   "all_people": {
+    "rate_baseline": 0.2061210039989517,
+    "rate_reform": 0.21168327966766926,
+    "headcount_baseline": 14422182.05283679,
+    "headcount_reform": 14811371.65877679,
+    "people_lifted_out": -389189.6059399992
+   },
+   "children_under_18": {
+    "rate_baseline": 0.26146250424787376,
+    "rate_reform": 0.2692731613379091,
+    "headcount_baseline": 4029298.578342706,
+    "headcount_reform": 4149665.625232786,
+    "children_lifted_out": -120367.04689007998,
+    "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
+   }
+  }
+ },
+ "sample": {
+  "sampling": "numpy default_rng(20260925).choice(households, size=12000, replace=True, p=household_weight / total)",
+  "n_draws": 12000,
+  "unique_households_drawn": 5429,
+  "draws_in_northern_ireland": 282,
+  "northern_ireland_note": "the dataset carries constituency_code_oa for Great Britain only; Northern Ireland households (all of the uncoded ones) are placed at random anywhere in Northern Ireland",
+  "northern_ireland_weight_share": 0.024916838135709645,
+  "stored": "data/uk/private/households_sample.json (git-ignored; record-level survey derivative, never committed)"
+ }
+}

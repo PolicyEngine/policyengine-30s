@@ -15,7 +15,8 @@ Invariants:
   - verbatim: the statute wall contains the s. 35(1) paragraph once, at the stated offset;
     the code panel is the parameter file's lines; the quote is in the source sentence
   - traceability: every £ figure on screen is a computed or sourced number
-  - MOCK: national parts are flagged, labelled MOCK, and use real July 2024 constituency codes
+  - national: every stat, decile bar and tag traces to data/uk/national.json, whose accounting
+    identity closes; the record-level sample stays out of git and places every dot
   - round trip: rebuilding video.json from data/uk is a no-op
   - property-based: the range rounding in curve_claims always lands inside the computed
     flat stretch, and a stretch found by facts() is maximal
@@ -182,29 +183,96 @@ def test_every_pound_figure_traces(v, sw):
 
 # ------------------------------------------------------------------ source tags
 def test_curve_tag_names_the_run_that_drew_it(v, sw):
-    """The curve's small print is the version the sweep recorded; the MOCK deciles carry none."""
+    """The curve's small print is the version the sweep recorded."""
     assert v["sources"]["curve"] == [f"policyengine.py {sw['meta']['versions']['policyengine']} · static"]
-    assert v["sources"]["deciles"] == []
 
 
-# ------------------------------------------------------------------ MOCK national parts
-def test_mock_parts_are_flagged_and_placeable(v):
-    assert v["mock"] is True and set(v["mock_parts"]) == {"nation", "sample", "deciles"}
-    assert all(s["what"].startswith("MOCK") for s in v["nation"]["stats"])
-    assert v["nation"]["dotNote"].startswith("MOCK") and v["deciles"]["caption"][0].startswith("MOCK")
-    codes = {c["geoid"] for c in v["cdGeo"]}
+# ------------------------------------------------------------------ national results
+@pytest.fixture(scope="module")
+def nat():
+    return json.loads((UK / "national.json").read_text())
+
+
+def test_national_figures_are_the_run(v, nat):
+    """Each stat, bar and label is read from national.json, at the precision shown."""
+    assert v["mock"] is False and v["mock_parts"] == []
+    b, w = nat["budget"], nat["winners"]
+    child = nat["poverty"]["absolute_ahc"]["children_under_18"]["children_lifted_out"]
+    cost, share, kids = v["nation"]["stats"]
+    assert cost == {"kind": "billion", "value": round(b["net_cost_2026_27_gbp"] / 1e9), "digits": 0, "what": "net cost in 2026-27"}
+    assert share["value"] == round(100 * w["share_households_gaining_over_1gbp"], 1) and share["what"] == "of households gain"
+    assert kids["value"] == round(abs(child), -2)
+    assert kids["what"] == ("fewer children in poverty" if child > 0 else "more children in poverty")
+    dec = sorted(nat["deciles"]["by_decile"], key=lambda r: r["decile"])
+    assert v["deciles"]["avg"] == [round(r["average_change_household_net_income"]) for r in dec]
+    assert v["deciles"]["caption"] == ["Average change per household", "\nby income decile"]
+
+
+def test_national_accounting_closes(nat):
+    """Households gain what the Exchequer loses (taxes forgone less benefits withdrawn), within 0.5%,
+    and the two aggregation paths (policyengine.py's programme totals, the script's own sums) agree."""
+    b = nat["budget"]
+    prog = b["policyengine_py_program_statistics"]
+    net = sum(x["change"] for k, x in prog.items() if not x["is_tax"] and k != "tax_credits") - sum(
+        x["change"] for x in prog.values() if x["is_tax"])
+    assert abs(net - b["net_cost_2026_27_gbp"]) < 1.0
+    assert abs(b["household_net_income_total_change"] - net) <= 0.005 * net
+    assert abs(prog["income_tax"]["change"] - b["income_tax_revenue_change"]) < 1.0
+    assert nat["meta"]["behavioral_responses"].startswith("none")
+    assert nat["meta"]["reform"]["value"] == 15_000 and nat["meta"]["reform"]["start_date"] == "2026-01-01"
+
+
+def test_national_tags_name_the_run_and_the_licence(v, nat):
+    run = f"policyengine.py {nat['meta']['versions']['policyengine']} · enhanced_frs_2024_25 · static"
+    assert nat["meta"]["dataset"]["key"] == "enhanced_frs_2024_25_2026"
     geo = json.loads((UK / "geography.json").read_text())
     # the boundary licence's two statements appear verbatim on the map they license
     assert v["sources"]["nation"] == [
+        run,
+        "poverty: absolute, after housing costs",
         "Source: Office for National Statistics licensed under the Open Government Licence v.3.0",
         "Contains OS data © Crown copyright and database right 2024",
     ]
-    assert geo["meta"]["attribution_notes"]["template_verbatim"][0] == v["sources"]["nation"][0]
+    assert geo["meta"]["attribution_notes"]["template_verbatim"][0] == v["sources"]["nation"][2]
+    assert v["sources"]["deciles"] == [run]
     assert "provenance" not in v
-    assert codes == {c["code"] for c in geo["constituencies"]} and len(codes) == 650
-    assert len(v["sample"]) == 12_000
-    for c1, g, c2, d in v["sample"]:
-        assert c1 == c2 and c1 in codes and 1 <= d <= 10 and g >= 0
+
+
+def test_the_survey_sample_stays_out_of_git(v, nat):
+    """The dots are record-level survey derivatives: video.json only names their file, the file sits
+    under data/uk/private/ (git-ignored), and nothing under it is tracked."""
+    assert v["sample"] is None and v["sampleFile"].startswith("private/")
+    ignored = subprocess.run(["git", "check-ignore", "-q", str(UK / v["sampleFile"])], cwd=ROOT)
+    assert ignored.returncode == 0
+    tracked = subprocess.run(["git", "ls-files", "data/uk/private"], cwd=ROOT, capture_output=True, text=True).stdout
+    assert tracked.strip() == ""
+    # national.json holds aggregates only: no list longer than the ten deciles
+    def longest(x):
+        if isinstance(x, dict):
+            return max([longest(y) for y in x.values()] or [0])
+        if isinstance(x, list):
+            return max([len(x)] + [longest(y) for y in x])
+        return 0
+    assert longest(nat) <= 10
+
+
+def test_every_draw_has_a_place(v, nat):
+    """Where the private sample exists: 12,000 draws, each in one of the 650 constituencies or, for
+    Northern Ireland (which the data does not split by constituency), in NI as a whole."""
+    path = UK / v["sampleFile"]
+    if not path.exists():
+        pytest.skip("data/uk/private/ is not in this checkout")
+    rows = json.loads(path.read_text())
+    codes = {c["geoid"] for c in v["cdGeo"]}
+    ni = set(v["sampleRegions"]["NI"])
+    assert len(rows) == nat["sample"]["n_draws"] == 12_000 and len(ni) == 18 and ni <= codes
+    for c1, g, c2, d in rows:
+        assert (c1 == "NI" and c2 is None) or (c1 == c2 and c1 in codes - ni), (c1, c2)
+        assert -1 <= d <= 10
+    assert sum(r[0] == "NI" for r in rows) == nat["sample"]["draws_in_northern_ireland"]
+    # the draws are weighted: their share gaining is the population's, within sampling error
+    share = sum(r[1] > 1 for r in rows) / len(rows)
+    assert abs(share - nat["winners"]["share_households_gaining_over_1gbp"]) < 0.02
 
 
 # ------------------------------------------------------------------ round trip

@@ -11,7 +11,7 @@ The rendered files are attached to the [latest release](../../releases/latest); 
 | `out/policyengine-30s-vertical-1080x1920.mp4` | 1080×1920, 60 fps (Reels, Shorts, TikTok) |
 | `out/posters-16x9/`, `out/posters-9x16/` | 2× stills at 12.9, 18.9, 23.6 and 28.8 s for thumbnails |
 
-A UK version (`?country=uk`) runs the same timeline on UK law: the Income Tax Act 2007 personal allowance, the policyengine-uk parameter file, a single parent in Manchester across earnings, and the 650 Westminster constituencies. Its national figures, dots and deciles are **MOCK placeholders**, bannered on every frame, until PolicyEngine has permission to process the UK survey data with AI tools. Sources and checks for every UK string are in [`data/uk/README.md`](data/uk/README.md); `tools/render_all.sh uk` writes the files to `out/uk/`.
+A UK version (`?country=uk`) runs the same timeline on UK law: the Income Tax Act 2007 personal allowance, the policyengine-uk parameter file, a single parent in Manchester across earnings, and the 650 Westminster constituencies. Its national figures come from policyengine.py 6.1.1 on the enhanced Family Resources Survey 2024-25; the survey microdata and the map's record-level draws stay out of the repo (`data/uk/private/`, git-ignored), so a fresh clone renders the UK map with placeholder dots under the MOCK DATA banner. Sources and checks for every UK string are in [`data/uk/README.md`](data/uk/README.md); `tools/render_all.sh uk` writes the files to `out/uk/`.
 
 ## The story
 
@@ -112,8 +112,9 @@ Preview any moment in a browser: `node tools/serve.mjs 4317`, then open `http://
   - `data/uk/amount.yaml`: verbatim from `PolicyEngine/policyengine-uk` (`policyengine_uk/parameters/gov/hmrc/income_tax/allowances/personal_allowance/amount.yaml`) at commit 412b25aa, AGPL-3.0.
   - Statute text (`data/uk/statute.json`): Income Tax Act 2007, Part 3, and Finance Act 2021 s. 5, from legislation.gov.uk. Contains public sector information licensed under the Open Government Licence v3.0.
   - Edward VI, "Discourse on the Reformation of Abuses" (1551, public domain), as printed in J. G. Nichols (ed.), *Literary Remains of King Edward the Sixth*, vol. 2 (Roxburghe Club, 1857), p. 486, via the Internet Archive.
+  - UK national figures: the Family Resources Survey, Department for Work and Pensions, distributed by the UK Data Service under its End User Licence, as enhanced by PolicyEngine's `policyengine-uk-data` 1.56.16 (`enhanced_frs_2024_25`). The data creators, depositors and the UK Data Service bear no responsibility for the analysis here. Only aggregates are published; no record-level data is in this repository.
   - Westminster constituency boundaries, July 2024 (`data/uk/geography.json`, simplified), and the ONS region and country lookups. Source: Office for National Statistics licensed under the Open Government Licence v.3.0. Contains OS data © Crown copyright and database right 2024.
-  - The UK family curve is computed from single households defined in `tools/uk/uk_family.py`; no survey microdata is loaded. The national figures, dots and deciles in the UK video are MOCK placeholders, marked as such on every frame.
+  - The UK family curve is computed from single households defined in `tools/uk/uk_family.py`. The national figures come from the enhanced Family Resources Survey 2024-25 (policyengine-uk-data 1.56.16) through policyengine.py 6.1.1; the FRS is UK Data Service data under its End User Licence, so only aggregates are committed.
 - Fonts: Inter, JetBrains Mono and Newsreader (SIL Open Font License, via Fontsource). US state shapes: `us-atlas` (Census cartographic boundaries). The score is synthesized by `tools/soundtrack.py`.
 
 ## License

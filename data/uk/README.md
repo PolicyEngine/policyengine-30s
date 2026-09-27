@@ -2,7 +2,7 @@
 
 `data/uk/video.json` is the only file the page reads for the UK cut (`site/index.html?country=uk`). It has the same schema as `data/video.json`, plus the UK fields the page reads: `country`, `currency`, `locale`, `captions`, `reform.chip`, `household.figures`, `household.axis_title`, `code.repo` and `statute.wall_label`. It also carries two optional hints, `household.curve.yMax` and `household.curve.yTicks`. The UK gain tops out at £972, so the US axis (0 to 1,800, with ticks at 800 and 1,600) would squash the curve.
 
-**National figures are MOCK.** No UK survey microdata (`enhanced_frs_*`, `populace_uk_*`, anything from the UK Data Service) was opened, downloaded or processed. That waits on decision d404. The file sets `"mock": true` and `"mock_parts": ["nation", "sample", "deciles"]`, so the page paints its MOCK DATA banner on every frame. Every national label on screen starts with "MOCK". The statute, quote, code panel and family curve are real. Everything below was retrieved or computed on 2026-09-25.
+**National figures** come from a PolicyEngine run on UK survey microdata: the enhanced Family Resources Survey 2024-25 (`enhanced_frs_2024_25`, policyengine-uk-data 1.56.16, the dataset policyengine.py 6.1.1 certifies), uprated to 2026. See "The national run" below. The microdata and anything record-level derived from them stay in `data/uk/private/`, which is git-ignored: the UK Data Service End User Licence does not allow redistribution. Only aggregates are committed (`national.json`). The 12,000 draws behind the map's dots are written to `private/sample_video.json`, and `video.json` only names that file. A checkout without it (a fresh clone, CI) renders placeholder dots under the MOCK DATA banner.
 
 ## Rebuild
 
@@ -22,6 +22,9 @@ uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6
 uv run --with pyproj --with shapely --with pypdf tools/uk/build_uk_geography.py
 # 4b. the same family at £400 and £600 rent (README caveat; asserts £500 matches step 2)
 uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt python tools/uk/rent_sensitivity.py
+# 4c. the national run (needs HF_TOKEN with access to policyengine/policyengine-uk-data-private); writes
+#     national.json and the git-ignored private/households_sample.json
+uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt python tools/uk/national.py
 # 5. assemble and assert every on-screen statement
 uv run --no-project --with pyyaml python tools/uk/build_uk_video.py
 # invariants
@@ -51,11 +54,11 @@ The compute scripts build single households from a `situation` and never load a 
 | Line 2 | "+£486 from £48,700 to £50,270." | £486.00 = 20% × £2,430, with no UC in either run | Holds at all 1,571 £1 points (and 7 plotted points). The exact flat stretch is £48,677 to £50,270. £50,270 = £12,570 + the £37,700 basic rate limit. FA 2021 s. 5(1) sets that limit for 2026-27, and it equals the model's threshold. |
 | Note | "Universal Credit counts pay after tax, so it takes back 55p of each £1 of the tax cut." | Code, read this session in both versions: `uc_earned_income` = max(0, earnings − work allowance − `benunit_tax` − pension contributions), where `benunit_tax` sums `income_tax` and `national_insurance`, and `uc_income_reduction` = `reduction_rate` (0.55) × earned income. Law: UC Regs 2013 reg. 22(1)(b)(ii) "55% of the amount by which that earned income exceeds the work allowance"; reg. 55(5)(b) deducts "income tax or primary Class 1 contributions". | Wherever the family is on UC in both runs and the tax cut is positive, ΔUC = −0.55 × tax cut and UC earned income rises by the whole tax cut. That holds at all 35,431 such £1 points. NI never changes. |
 | Nation | "Now all of the UK." | Scope. The map draws all 650 July 2024 Westminster constituencies (`geography.json`, ONS, OGL v3.0). | — |
-| Nation | "MOCK cost in 2026-27", "MOCK of households gain", "MOCK fewer children in poverty" (values 0) | **MOCK** | — |
-| Map | "MOCK dots: placeholder households, not survey records, each placed at random in a July 2024 Westminster constituency" | **MOCK.** 12,000 rows from `mock_national()` (`random.Random(20260925)`). Each row is `[constituency_code, gain, constituency_code, decile]`. The codes are real July 2024 codes drawn uniformly. Gains are drawn from the round placeholders {0, 250, 500, 1000}. Deciles run 1–10. | Every code is one of the 650 in `geography.json` |
-| Deciles | "MOCK average change per household by income decile", bars £100 … £1,000 | **MOCK**: a straight ramp | — |
+| Nation | "£22 billion net cost in 2026-27", "75.9% of households gain", "66,800 fewer children in poverty" | `national.json`: net Exchequer cost £22.14bn (income tax forgone £22.82bn, less £0.60bn Universal Credit and £0.08bn Pension Credit withdrawn); 75.92% of households gain over £1; children in absolute poverty after housing costs fall from 16.98% to 16.55%, 66,840 children | `test_national_figures_are_the_run`, `test_national_accounting_closes` |
+| Map | "Each dot: a household drawn by weight, placed at random in its assigned constituency (in Northern Ireland, anywhere in Northern Ireland)" | 12,000 draws by household weight (`numpy default_rng(20260925)`, 5,429 distinct households). Great Britain households carry `constituency_code_oa` in the dataset; Northern Ireland households (2.5% of households, 282 draws) carry none, so their dots fall anywhere in NI. | `test_every_draw_has_a_place` (local), `test_the_survey_sample_stays_out_of_git` |
+| Deciles | "Average change per household by income decile", £168 in the lowest decile to £1,635 in the highest | policyengine.py `economic_impact_analysis` household net income deciles, re-derived from the household rows to the penny in `national.py` | `test_national_figures_are_the_run` |
 | Curve tag | "policyengine.py 6.1.1 · static", bottom right of the chart | The version the sweep recorded. "Static" is checked: only `income_tax` and `universal_credit` move in the exact decomposition of net income, so earnings do not respond. The same curve on policyengine-uk 2.102.0 is in `compute/`. | `test_curve_tag_names_the_run_that_drew_it` |
-| Map tag | "Source: Office for National Statistics licensed under the Open Government Licence v.3.0" / "Contains OS data © Crown copyright and database right 2024", bottom right of the map | ONS's two required statements for its boundaries, verbatim from `geography.json → meta.attribution_notes` | `test_mock_parts_are_flagged_and_placeable` |
+| Map tag | "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static" / "poverty: absolute, after housing costs" / "Source: Office for National Statistics licensed under the Open Government Licence v.3.0" / "Contains OS data © Crown copyright and database right 2024", bottom right of the map | ONS's two required statements for its boundaries, verbatim from `geography.json → meta.attribution_notes` | `test_mock_parts_are_flagged_and_placeable` |
 | Close | Wordmark, tagline, "Free and open source · policyengine.org"; nothing below | — | — |
 | Home dot | `lonlat` [−2.19, 53.492] | Area-weighted centroid of Manchester Central (E14001352) in `geography.json`. The dot marks an example household, not a located one. | — |
 
@@ -72,9 +75,17 @@ The compute scripts build single households from a `situation` and never load a 
   - the reform card is the dict the model received;
   - the statute, code and quote are verbatim;
   - every £ figure on screen traces to a computed or sourced number;
-  - the MOCK parts are flagged;
+  - every national number traces to `national.json`, whose accounting identity closes, and the survey sample stays out of git;
   - rebuilding `video.json` is a no-op;
   - property-based tests of the range rounding and plateau detection.
+
+## The national run
+
+`tools/uk/national.py` runs policyengine.py 6.1.1's UK flow on its certified dataset:
+- **Dataset.** `enhanced_frs_2024_25.h5` from `policyengine/policyengine-uk-data-private` at 1.56.16. Its sha256 (`e433e532…`) matches policyengine.py 6.1.1's release manifest. `ensure_datasets` uprates it to 2026: 52,846 households, 113,617 people, 31.46 million weighted households.
+- **Reform.** Personal allowance £15,000 from 2026-01-01. policyengine-uk labels fiscal year 2026-27 as 2026 and reads it at 1 January; a start of 6 April 2026 leaves the run on current law (checked). The run asserts every person's allowance moved from £12,570 to £15,000 and nobody's fell.
+- **Static.** No labour-supply elasticities are set.
+- **Checks.** Income tax and Universal Credit changes agree between policyengine.py's programme statistics and the script's own weighted sums. Decile averages agree with a recomputation from household rows to the penny. Households' total gain equals the net Exchequer cost within 0.5%.
 
 ## Not verified, and caveats
 
@@ -86,7 +97,16 @@ The compute scripts build single households from a `situation` and never load a 
 - **The basic rate** (20%), and the 40% that gives the £972 step, are the model's values. They were not re-read from the legislation. The £972 step is on the chart but not in the text.
 - **"1551"** rests on Nichols's running head and item title. The manuscript itself was not examined.
 - **Rounding on screen.** "+£219" is £218.70 rounded to the pound. Line 1 ends at £48,000 because the exact stretch ends at £48,001, and upper bounds round down to £10. At £48,000 the reform still pays £0.48 a year of UC, so "on UC in both runs" holds there only just.
-- **National results** are all MOCK (d404).
+- **The poverty measure.** The child poverty stat uses absolute poverty after housing costs, a fixed line like the US version's SPM thresholds. policyengine-uk computes relative poverty against 60% of each run's own median, and this reform raises the median, so the relative line rises with it. The four measures, children under 18:
+
+  | Measure | Baseline | Reform | Change |
+  |---|---|---|---|
+  | Absolute, after housing costs (on screen) | 16.98% | 16.55% | 66,840 fewer |
+  | Absolute, before housing costs | 11.78% | 11.39% | 59,863 fewer |
+  | Relative, after housing costs | 26.15% | 26.93% | 120,367 more |
+  | Relative, before housing costs | 19.40% | 20.28% | 136,071 more |
+- **Households that lose.** 12 records (19,514 weighted households, 0.06%) lose over £1: their Pension Credit and Housing Benefit fall by more than their tax cut (unweighted over those records: income tax −£5,532, Pension Credit −£1,627, Housing Benefit −£18,206). Housing Benefit is outside policyengine.py's UK programme list, which is why households' total gain (£22.128bn) sits £11m under the net cost (£22.139bn).
+- **Net cost** counts income tax, National Insurance and the benefits in policyengine.py's UK programme list. National Insurance does not move.
 
 ## Layout notes for `site/` (not edited from here)
 

@@ -11,11 +11,13 @@ Inputs, each written by a script in tools/uk/ (see data/uk/README.md):
   data/uk/statute.json, data/uk/quote.json         legislation.gov.uk and Nichols (1857), via fetch_sources.py
   data/uk/amount.yaml (+ .commit, code_source.json) policyengine-uk parameter file, via fetch_sources.py
   data/uk/geography.json                           ONS July 2024 constituencies, via build_uk_geography.py
+  data/uk/national.json                            the national run on the enhanced FRS, via national.py
+  data/uk/private/households_sample.json           its 12,000 weighted draws (git-ignored: survey-derived records)
 
-National results are MOCK: UK survey microdata may not be processed until
-permission is settled (decision d404), so the nation, sample and deciles parts
-come from mock_national() below, are labelled MOCK on screen, and set
-"mock": true, which makes the page paint its MOCK DATA banner on every frame.
+The map's dots are record-level derivatives of UK survey microdata, so they never go
+in video.json: this script writes them to data/uk/private/sample_video.json (git-ignored)
+and video.json only names that file. The page loads it; without it (a fresh clone, CI)
+the page paints its MOCK DATA banner and placeholder dots.
 
 Every on-screen statement is asserted here; the build fails rather than ship a
 string the data does not support.
@@ -27,7 +29,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import random
 import re
 import sys
 from pathlib import Path
@@ -58,45 +59,58 @@ def fiscal_label(year):
     return f"{year}-{(year + 1) % 100:02d}"
 
 
-# ------------------------------------------------------------------ MOCK national data
-MOCK_SEED = 20260925
-MOCK_N = 12_000
-MOCK_GAIN_LEVELS = [0, 250, 500, 1000]        # round placeholders, not estimates
-MOCK_GAIN_WEIGHTS = [0.4, 0.2, 0.3, 0.1]
-MOCK_DECILE_AVG = [100 * (i + 1) for i in range(10)]  # a straight ramp: obviously not a result
+# ------------------------------------------------------------------ national results
+NI = "NI"            # sample key for Northern Ireland households, which carry no constituency code
+POVERTY = "absolute_ahc"   # fixed line, like the US SPM thresholds; the relative line moves with the reform's median
+POVERTY_LABEL = "poverty: absolute, after housing costs"
+SAMPLE_FILE = "private/sample_video.json"
 
 
-def mock_national(codes):
-    """MOCK: placeholder national figures until the UK microdata question (d404) is settled.
-
-    Every value here is invented; nothing comes from a PolicyEngine national run or
-    from survey data. The dots use real July 2024 constituency codes (so the page can
-    place them) with pseudo-random gains and deciles from a fixed seed.
-    """
-    rnd = random.Random(MOCK_SEED)
-    sample = []
-    for _ in range(MOCK_N):
-        c = rnd.choice(codes)
-        gain = rnd.choices(MOCK_GAIN_LEVELS, MOCK_GAIN_WEIGHTS)[0]
-        sample.append([c, float(gain), c, rnd.randint(1, 10)])
-    deciles = {"avg": list(MOCK_DECILE_AVG), "caption": ["MOCK: average change", "\nper household by income decile"]}
+def national_video(nat, step):
+    """The nation scene, stats and deciles from data/uk/national.json; every number is read, none typed."""
+    b, w, pov = nat["budget"], nat["winners"], nat["poverty"][POVERTY]["children_under_18"]
+    children = pov["children_lifted_out"]
+    assert abs(b["identity_gap_gbp"]) <= 0.005 * b["net_cost_2026_27_gbp"]
+    dec = sorted(nat["deciles"]["by_decile"], key=lambda r: r["decile"])
+    assert [r["decile"] for r in dec] == list(range(1, 11))
+    deciles = {"avg": [round(r["average_change_household_net_income"]) for r in dec],
+               "caption": ["Average change per household", "\nby income decile"]}
     nation = {
-        "mock": True,
         "caption": ["Now all of ", "the UK."],
         "stats": [
-            {"kind": "billion", "value": 0, "digits": 0, "what": "MOCK cost in 2026-27"},
-            {"kind": "pct", "value": 0.0, "digits": 1, "what": "MOCK of households gain"},
-            {"kind": "count", "value": 0, "what": "MOCK fewer children in poverty"},
+            {"kind": "billion", "value": round(b["net_cost_2026_27_gbp"] / 1e9), "digits": 0, "what": "net cost in 2026-27"},
+            {"kind": "pct", "value": round(100 * w["share_households_gaining_over_1gbp"], 1), "digits": 1, "what": "of households gain"},
+            {"kind": "count", "value": round(abs(children), -2),
+             "what": "fewer children in poverty" if children > 0 else "more children in poverty"},
         ],
-        "dotNote": "MOCK dots: placeholder households, not survey records, each placed at random in a July 2024 Westminster constituency",
-        "draws": {"n": MOCK_N, "unique": None},
-        "dotMax": max(MOCK_GAIN_LEVELS),
-        "households": None,
+        "dotNote": ("Each dot: a household drawn by weight, placed at random in its assigned constituency "
+                    "(in Northern Ireland, anywhere in Northern Ireland)"),
+        "draws": {"n": nat["sample"]["n_draws"], "unique": nat["sample"]["unique_households_drawn"]},
+        # the colour scale tops out at five basic-rate tax cuts (the 99th percentile of the draws);
+        # lights come on in steps of one basic-rate tax cut
+        "dotMax": 5 * step,
+        "step": step,
+        "households": w["total_weighted_households"],
         "deciles": deciles,
-        "raw": {"cost": None, "share": None, "children_lifted_out": None},
-        "generator": "tools/uk/build_uk_video.py mock_national() (random.Random(20260925)); MOCK, pending data permission",
+        "raw": {"net_cost": b["net_cost_2026_27_gbp"], "gross_income_tax_cost": b["gross_income_tax_cost_2026_27_gbp"],
+                "share": w["share_households_gaining_over_1gbp"], "children_lifted_out": children,
+                "poverty_measure": POVERTY},
     }
-    return nation, sample, deciles
+    return nation, deciles
+
+
+def write_private_sample(codes):
+    """Rows the page places as dots: [code or NI, gain, code or null, decile]. Written only where the
+    private national sample exists; video.json never carries them."""
+    src = UK / "private" / "households_sample.json"
+    if not src.exists():
+        print("no data/uk/private/households_sample.json: the page will show MOCK dots (run national.py)")
+        return None
+    rows = json.loads(src.read_text())["rows"]
+    out = [[c, g, None if c == NI else c, d] for c, g, d in rows]
+    assert all(c == NI or c in codes for c, *_ in out), "a draw sits in an unknown constituency"
+    (UK / SAMPLE_FILE).write_text(json.dumps(out, separators=(",", ":")))
+    return out
 
 
 # ------------------------------------------------------------------ pieces
@@ -269,9 +283,14 @@ def main():
     home = next(c for c in cons if c["name"] == HOME_CONSTITUENCY)
     lonlat = centroid(home["polys"])
 
-    codes = sorted(c["code"] for c in cons)
-    nation, sample, deciles = mock_national(codes)
-    assert {r[0] for r in sample} <= set(codes) and all(r[0] == r[2] for r in sample)
+    codes = {c["code"] for c in cons}
+    ni_codes = sorted(c["code"] for c in cons if c["nation"] == "Northern Ireland")
+    assert len(ni_codes) == 18
+    nat = load("national.json")
+    step = sw["fine"]["tax_cut_on_the_basic_rate_band"]      # £486: 20% of the £2,430 rise
+    assert step == 0.2 * (to_value - from_value)
+    nation, deciles = national_video(nat, round(step))
+    write_private_sample(codes)
 
     captions = {
         "code": "PolicyEngine turns the law into ",
@@ -280,15 +299,15 @@ def main():
         "nation": list(nation["caption"]),
     }
     v = m["versions"]
+    nm = nat["meta"]
+    assert nm["behavioral_responses"].startswith("none") and nm["dataset"]["sha256_matches_policyengine_py_6_1_1_manifest"]
+    national_run = f"policyengine.py {nm['versions']['policyengine']} · {nm['dataset']['key'].rsplit('_', 1)[0]} · static"
     video = {
         "country": "uk",
         "currency": "£",
         "locale": "en-GB",
-        "mock": True,
-        "mock_parts": ["nation", "sample", "deciles"],
-        "mock_note": ("MOCK: every national figure (nation stats, the 12,000 map dots, decile bars) is a placeholder "
-                      "from mock_national() in tools/uk/build_uk_video.py; no UK survey microdata was processed "
-                      "(pending data permission, decision d404). The statute, quote, code and family curve are real."),
+        "mock": False,
+        "mock_parts": [],
         "captions": captions,
         "reform": {
             "label": code["label"],
@@ -306,10 +325,11 @@ def main():
         # each chart's small print, in its bottom-right corner; nothing below the URL on the close
         "sources": {
             "curve": [f"policyengine.py {v['policyengine']} · static"],
-            # the map draws ONS boundaries, whose licence requires both statements wherever they
-            # are used; the video travels without the README. Its figures are MOCK, labelled as such
-            "nation": boundary_statements(geo),
-            "deciles": [],
+            # the national figures: the run, its dataset and the poverty measure; then the map's ONS
+            # boundaries, whose licence requires both statements wherever they are used (the video
+            # travels without the README)
+            "nation": [national_run, POVERTY_LABEL, *boundary_statements(geo)],
+            "deciles": [national_run],
         },
         "statute": {
             "wall": st["wall_text"],
@@ -341,7 +361,10 @@ def main():
                        "cross-checked with policyengine.py pe.uk.calculate_household)"),
         },
         "nation": nation,
-        "sample": sample,
+        # the dots load from a git-ignored file; Northern Ireland's draws fall back to the whole of NI
+        "sample": None,
+        "sampleFile": SAMPLE_FILE,
+        "sampleRegions": {NI: ni_codes},
         "districts": None,
         "deciles": deciles,
     }

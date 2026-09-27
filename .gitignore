@@ -23,3 +23,6 @@ data/raw/
 # UK: raw downloads (re-fetched by tools/uk/fetch_sources.py and the geography build)
 data/uk/raw/
 audio/**/*.wav
+
+# UK survey microdata and anything record-level derived from it (UKDS End User Licence: never redistributed)
+data/uk/private/

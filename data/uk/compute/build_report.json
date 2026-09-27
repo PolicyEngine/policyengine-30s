@@ -1,10 +1,6 @@
 {
  "written": "data/uk/video.json",
- "mock_parts": [
-  "nation",
-  "sample",
-  "deciles"
- ],
+ "mock_parts": [],
  "on_screen": {
   "captions": {
    "code": "PolicyEngine turns the law into ",
@@ -42,17 +38,21 @@
     "policyengine.py 6.1.1 · static"
    ],
    "nation": [
+    "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static",
+    "poverty: absolute, after housing costs",
     "Source: Office for National Statistics licensed under the Open Government Licence v.3.0",
     "Contains OS data © Crown copyright and database right 2024"
    ],
-   "deciles": []
+   "deciles": [
+    "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static"
+   ]
   },
   "nation_stats": [
-   "MOCK cost in 2026-27",
-   "MOCK of households gain",
-   "MOCK fewer children in poverty"
+   "net cost in 2026-27",
+   "of households gain",
+   "fewer children in poverty"
   ],
-  "dotNote": "MOCK dots: placeholder households, not survey records, each placed at random in a July 2024 Westminster constituency"
+  "dotNote": "Each dot: a household drawn by weight, placed at random in its assigned constituency (in Northern Ireland, anywhere in Northern Ireland)"
  },
  "points_checked_on_the_plotted_grid": {
   "+£219 from £15,000 to £48,000.": 133,

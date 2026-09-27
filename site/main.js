@@ -112,7 +112,7 @@ function layout() {
       lines3: { x: 800, y: 680, size: 60 },
       gain: { x: 760, y: 745, size: 124 },
       capTop: { x: 120, y: 96, w: 1200, size: 64 },
-      mapBox: COUNTRY === "uk" ? [[1060, 250], [1800, 965]] : [[660, 290], [1800, 960]],
+      mapBox: COUNTRY === "uk" ? [[1060, 235], [1800, 900]] : [[660, 290], [1800, 960]],
       chart: [[330, 330], [1590, 880]],
       stats: { x: 120, y: 330, gap: 200 },
       legend: { x: 120, y: 184 },
@@ -754,6 +754,13 @@ function buildMap() {
     map.paths = new Map(); map.bounds = new Map();
     map.outline = new Path2D(fc.features.map((f) => path(f)).join(""));
   }
+  // regions a dot can fall back to when its record carries no area code (UK: Northern Ireland)
+  for (const [key, codes] of Object.entries(V.sampleRegions || {})) {
+    const feats = (V.cdGeo || []).filter((d) => codes.includes(d.geoid))
+      .map((d) => ({ type: "Feature", geometry: { type: "MultiPolygon", coordinates: d.polys } }));
+    map.paths.set(key, new Path2D(feats.map((f) => path(f)).join("")));
+    map.bounds.set(key, path.bounds({ type: "FeatureCollection", features: feats }));
+  }
   map.proj = proj;
   const home = V.household.lonlat || [-82.9988, 39.9612];
   map.home = proj(home);
@@ -1121,9 +1128,30 @@ function mockSample() {
   return Array.from({ length: 12000 }, () => [fips[Math.floor(rnd() * fips.length)], rnd() < 0.3 ? 800 * (1 + Math.floor(rnd() * 3)) : 0, null]);
 }
 
+// Placeholder dots for a clone without the private survey sample: area codes from the map's own shapes,
+// gains and deciles from a fixed seed. Only ever drawn under the MOCK DATA banner.
+function mockAreaSample() {
+  const rnd = mulberry32(99);
+  const codes = (V.cdGeo || []).map((d) => d.geoid);
+  return Array.from({ length: 12000 }, () => {
+    const c = codes[Math.floor(rnd() * codes.length)];
+    return [c, rnd() < 0.3 ? (V.nation.step || 800) * (1 + Math.floor(rnd() * 3)) : 0, c, 1 + Math.floor(rnd() * 10)];
+  });
+}
+
 (async function boot() {
   const real = await loadJSON(COUNTRY === "us" ? "/data/video.json" : `/data/${COUNTRY}/video.json`);
   V = real || MOCK_VIDEO;
+  // record-level dots live outside video.json (UK: survey-derived, git-ignored)
+  if (real && V.sampleFile) {
+    V.sample = await loadJSON(`/data/${COUNTRY}/${V.sampleFile}`);
+    if (!V.sample) {
+      V.sample = mockAreaSample();
+      V.mock = true;
+      V.mock_parts = [...(V.mock_parts || []), "sample"];
+      V.nation.dotNote = "MOCK dots: the survey sample is not in this checkout (data/uk/private/)";
+    }
+  }
   if (!real) {
     V.sample = mockSample();
     V.code = V.code || (await loadJSON("/data/code_mock.json"));
