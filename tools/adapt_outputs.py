@@ -140,7 +140,7 @@ def nation(sample_meta):
             {"kind": "pct", "value": round(100 * share, 1), "digits": 1, "what": "of households gain"},
             {"kind": "count", "value": round(children_out, -2), "what": "fewer children in poverty"},
         ],
-        # 12,000 draws with replacement cover 6,976 distinct households; the count goes in provenance
+        # 12,000 draws with replacement cover 6,976 distinct households (README, "The story")
         "dotNote": "Each dot: a household drawn by weight, placed at random in its assigned congressional district",
         "draws": {"n": sample_meta.get("n_draws", 12000) if sample_meta else 12000,
                   "unique": sample_meta.get("unique_households_drawn") if sample_meta else None},

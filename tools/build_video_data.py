@@ -51,19 +51,35 @@ def code_block():
     }
 
 
-def provenance(year):
-    n = load("national.json")
-    if not n:
-        return ["MOCK provenance"]
-    v = n["meta"]["versions"]
+def sources():
+    """Each chart's small print, from what the runs recorded. The curve comes from the household
+    sweep; the map, the stats and the deciles from the national run on the dataset. Returns None
+    when an input is missing, so the build marks the tags MOCK (and the page paints the banner).
+
+    Every word is checked against the runs, not only the version numbers: "static" against the
+    reform (no gov.simulation behavioural parameters) and the national run's own record, and
+    the poverty measure against the figure the child-poverty stat shows."""
+    n, sw, hh, nv = load("national.json"), load("earnings_sweep.json"), load("household.json"), load("nation_video.json")
+    if not (n and sw and hh and nv):
+        return None
+    for rd in (hh["meta"]["reform_dict_passed"], n["meta"]["reform"].get("reform_dict_passed", {})):
+        assert not any(k.startswith("gov.simulation") for k in rd), "a behavioural parameter is set; the tags say static"
+    assert n["meta"]["behavioral_responses"].startswith("none"), n["meta"]["behavioral_responses"]
+    spm = n["poverty"]["spm"]["children_under_18"]["children_lifted_out"]
+    assert nv["stats"][2]["value"] == round(spm, -2), "the child poverty stat is not the SPM figure"
+    # the curve's tag names policyengine.py: its household calculator must reproduce every point
+    cc = load("compute/checks/curve_policyengine_py.json")
+    assert cc and cc["points"] == len(sw["earnings"]) and cc["max_abs_diff_dollars"] < 0.01, "run curve_policyengine_py.py"
+    assert cc["versions"]["policyengine"] == sw["meta"]["versions"]["policyengine"]
     ds = n["meta"]["dataset"]["default_dataset"]
-    nv = load("nation_video.json") or {}
-    dr = nv.get("draws") or {}
-    return [
-        f"policyengine.py {v['policyengine']} · policyengine-us {v['policyengine-us']} · dataset {ds}",
-        f"Tax year {year} · static, no behavioral responses · poverty: Supplemental Poverty Measure",
-        f"Map: {dr.get('n', 12000):,} weighted draws of {dr.get('unique') or 0:,} distinct households",
-    ]
+    run = lambda v: f"policyengine.py {v['policyengine']}"
+    national = f"{run(n['meta']['versions'])} · {ds} · static"
+    return {
+        "curve": [f"{run(sw['meta']['versions'])} · static"],
+        # the official poverty measure ignores tax credits, so the child poverty figure needs its measure named
+        "nation": [national, "poverty: Supplemental Poverty Measure"],
+        "deciles": [national],
+    }
 
 
 def cd_geometry():
@@ -102,7 +118,7 @@ def main():
         "cdGeo": cd_geometry(),
         "code": code,
         "signoff": 'Free and open source · <b>policyengine.org</b>',
-        "provenance": provenance(int(rperiod[:4])),
+        "sources": sources() or {"curve": ["MOCK"], "nation": ["MOCK"], "deciles": ["MOCK"]},
     }
 
     st = load("statute.json")
@@ -175,6 +191,8 @@ def main():
         fips = [6, 48, 12, 36, 42, 17, 39, 13, 37, 26, 34, 51, 53, 4, 47, 18, 25, 29, 24, 55]
         video["sample"] = [[rnd.choice(fips), rnd.choice([0, 0, 800, 1600]), None, rnd.randint(1, 10)] for _ in range(12000)]
 
+    if not sources():
+        mock_parts.append("sources")
     video["districts"] = None  # see adapt_outputs.py: district estimates too noisy to show
     video["deciles"] = video["nation"].get("deciles")
 
