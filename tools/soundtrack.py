@@ -166,7 +166,8 @@ SWEEP_UNDER = 6.0
 
 def level_sweeps(bed, sweeps, report=None):
     """Scale each sweep (a full-length stereo buffer plus its reverb send) to SWEEP_UNDER LU
-    under bed at the sweep's loudest moment; return their sum.
+    under bed at the loudest window within the dry sweep (a reverb tail past its end is not
+    measured); return their sum.
 
     Every candidate window lies inside the sweep itself, one per sample: a riser's window must
     not reach the hit it leads into (the limiter would squash the bed and skew the comparison),
@@ -543,8 +544,7 @@ def build(events, report=None, stems=None):
         pk = np.abs(resample_poly(mix, 4, 1, axis=1)).max(0).reshape(-1, 4).max(1)[: mix.shape[1]]
         ceil = 10 ** (-2.0 / 20)
         g = np.minimum(1.0, ceil / np.maximum(pk, 1e-9))
-        la = int(0.003 * SR)
-        g = np.minimum.reduce([np.roll(g, -k) for k in range(la)])
+        g = lookahead_min(g, int(0.003 * SR))
         rel = np.exp(-1 / (0.12 * SR))
         # release smoothing (attack instant): track min with exponential recovery
         out = np.empty_like(g); cur = 1.0
@@ -562,6 +562,14 @@ def build(events, report=None, stems=None):
     if stems is not None:
         stems.update(bed_pre=bed, sweeps_pre=air, bed=hp(bed, 30) * env, sweeps=hp(air, 30) * env)
     return mix
+
+
+def lookahead_min(g, la):
+    """out[i] = min(g[i], ..., g[i + la - 1]), wrapping at the end: the limiter's lookahead.
+    A sliding-minimum filter; the former np.roll version built la full-length copies (1.7 GB
+    of temporaries per mastering pass at la = 144) and is kept in the tests as the reference."""
+    from scipy.ndimage import minimum_filter1d
+    return minimum_filter1d(g, size=la, mode="wrap", origin=-(la // 2))
 
 
 def P(t, a, b):

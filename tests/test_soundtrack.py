@@ -12,6 +12,14 @@ import soundtrack as sd
 from conftest import ROOT
 
 
+@given(st.integers(1, 400), st.integers(1, 200), st.integers(0, 2**32 - 1))
+def test_limiter_lookahead_matches_the_reference(n, la, seed):
+    """Differential: the sliding-minimum lookahead equals the original np.roll formulation."""
+    g = np.random.default_rng(seed).random(n)
+    ref = np.minimum.reduce([np.roll(g, -k) for k in range(la)])
+    assert np.array_equal(sd.lookahead_min(g, la), ref)
+
+
 @given(st.floats(min_value=-1, max_value=1))
 def test_pan_law_keeps_power(pan):
     buf = np.zeros((2, 100))
