@@ -197,7 +197,7 @@ def test_national_figures_are_the_run(v, nat):
     """Each stat, bar and label is read from national.json, at the precision shown."""
     assert v["mock"] is False and v["mock_parts"] == []
     b, w = nat["budget"], nat["winners"]
-    pov = nat["poverty"]["absolute_ahc"]["children_under_18"]
+    pov = nat["poverty"]["absolute_bhc"]["children_under_18"]
     # the count and its direction come from the two headcounts themselves, not the stored difference
     child = pov["headcount_baseline"] - pov["headcount_reform"]
     assert abs(child - pov["children_lifted_out"]) < 1e-6
@@ -233,7 +233,7 @@ def test_national_tags_name_the_run_and_the_licence(v, nat):
     # the boundary licence's two statements appear verbatim on the map they license
     assert v["sources"]["nation"] == [
         run,
-        "poverty: absolute, after housing costs",
+        "poverty: absolute, before housing costs",
         "Source: Office for National Statistics licensed under the Open Government Licence v.3.0",
         "Contains OS data © Crown copyright and database right 2024",
     ]

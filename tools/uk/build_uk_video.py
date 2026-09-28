@@ -61,8 +61,11 @@ def fiscal_label(year):
 
 # ------------------------------------------------------------------ national results
 NI = "NI"            # sample key for Northern Ireland households, which carry no constituency code
-POVERTY = "absolute_ahc"   # fixed line, like the US SPM thresholds; the relative line moves with the reform's median
-POVERTY_LABEL = "poverty: absolute, after housing costs"
+# PolicyEngine's default poverty measure: absolute, before housing costs (Max, 2026-09-28). Relative
+# poverty measures inequality rather than poverty, and deducting housing costs subtracts discretionary
+# spending (a flat or a mansion), which international poverty measurement does not do.
+POVERTY = "absolute_bhc"
+POVERTY_LABEL = "poverty: absolute, before housing costs"
 # The UK Data Service End User Licence (clause 11) requires any publication based on the data,
 # "printed, electronic or broadcast", to cite the collection in the form its metadata specifies.
 # Verbatim from https://datacatalogue.ukdataservice.ac.uk/studies/study/9563 (read 2026-09-27),

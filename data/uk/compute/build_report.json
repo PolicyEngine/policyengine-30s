@@ -39,7 +39,7 @@
    ],
    "nation": [
     "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static",
-    "poverty: absolute, after housing costs",
+    "poverty: absolute, before housing costs",
     "Source: Office for National Statistics licensed under the Open Government Licence v.3.0",
     "Contains OS data © Crown copyright and database right 2024"
    ],
