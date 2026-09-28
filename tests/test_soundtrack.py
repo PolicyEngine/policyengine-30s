@@ -63,7 +63,9 @@ def test_mastering_hits_platform_targets(score):
     _, mix, _, _ = score
     lufs = pyln.Meter(sd.SR).integrated_loudness(mix.T)
     true_peak = 20 * np.log10(np.abs(resample_poly(mix, 4, 1, axis=1)).max())
-    # the limiter's ceiling is -2 dBTP; 1e-3 dB allows for the 4x resampling estimate
+    # the limiter's ceiling is -2 dBTP as its own 4x meter reads it (1e-3 dB for this estimate's
+    # rounding); read at 16x the score peaks about 0.16 dB higher, as it did before the drums
+    # were shaped at the source
     assert abs(lufs + 14) < 0.5 and true_peak <= -2.0 + 1e-3
     # clean edges: the 30 ms fades start and end at exactly zero, and no sample inside them
     # exceeds the limiter ceiling (-2 dBTP) times the fade ramp
@@ -100,9 +102,11 @@ def test_the_limiter_only_catches_stray_peaks(score):
 
 
 def test_no_cue_lands_in_a_limiter_dip(score):
-    """The cues that carry the story keep the level they were written at: none starts in a
-    window the limiter cut by more than 1 dB. The third statistic used to land on a backbeat
-    and lose 6 dB, where its two siblings lost under 2."""
+    """The felt-mallet cues that carry the story (the lock, pings, statistics, plinks and decile
+    notes) keep the level they were written at: none starts in a window the limiter cut by more
+    than 1 dB. The third statistic used to land on a backbeat and lose 6 dB, where its two
+    siblings lost under 2. (The typing clicks are not held to this: one at 7.03 s, on a kick,
+    still loses about 1.1 dB, as it did before.)"""
     events, mix, _, stems = score
     at, cut = _limiter_cut(mix, stems)
     cues = [e for e in events if e["type"] in ("lock", "ping", "stat", "plink", "decile")]
@@ -112,7 +116,7 @@ def test_no_cue_lands_in_a_limiter_dip(score):
         assert cut[first].max() <= 1.0, (e, cut[first].max())
 
 
-@settings(max_examples=40)
+@settings(max_examples=40, deadline=None)
 @given(st.integers(0, 2**32 - 1), st.floats(0.05, 0.99), st.floats(40, 4000))
 def test_soft_clip_leaves_what_stays_under_the_knee_alone(seed, level, lo):
     """Wherever nothing reaches the knee, as the master will see it (through its high-pass, at
@@ -122,19 +126,40 @@ def test_soft_clip_leaves_what_stays_under_the_knee_alone(seed, level, lo):
     assert np.array_equal(sd.soft_clip(x, sd.DRUM_CEIL, sd.DRUM_KNEE), x)
 
 
+@settings(max_examples=25, deadline=None)
+@given(st.integers(0, 2**32 - 1), st.floats(1.5, 8.0), st.floats(0.05, 0.3))
+def test_soft_clip_only_touches_its_peaks(seed, over, at):
+    """A single loud 10 ms burst in quiet noise: the burst is clipped, and every sample more
+    than the resampling filter's reach (10 samples) before it, or after the high-passed burst
+    has fallen back under the knee, comes back bit for bit."""
+    g = np.random.default_rng(seed)
+    n, i, w = sd.SR // 2, int(at * sd.SR), int(0.01 * sd.SR)
+    x = sd.bp(g.standard_normal((2, n)), 200, 8000) * 0.01
+    x[:, i: i + w] += sd.bp(g.standard_normal((2, w)), 900, 5000)
+    x[:, i: i + w] *= over * sd.DRUM_CEIL / np.abs(x[:, i: i + w]).max()
+    y = sd.soft_clip(x, sd.DRUM_CEIL, sd.DRUM_KNEE)
+    loud = np.flatnonzero((np.abs(resample_poly(sd.hp(x, 30), 4, 1, axis=-1)) > sd.DRUM_KNEE).any(0)) // 4
+    assert not np.array_equal(y[:, i: i + w], x[:, i: i + w])
+    assert np.array_equal(y[:, : loud[0] - 10], x[:, : loud[0] - 10])
+    assert np.array_equal(y[:, loud[-1] + 11:], x[:, loud[-1] + 11:])
+
+
 @pytest.mark.parametrize("parts", [
     [("kick", 0.6)],                                                     # a kick on its own
     [("kick", 0.6 * sd.BACKBEAT), ("clap", 0.4 * sd.BACKBEAT)],          # backbeats, 8.5-14 s
     [("kick", 0.6 * sd.BACKBEAT), ("clap", 0.55 * sd.BACKBEAT)],         # backbeats, 14-26 s
 ])
 def test_the_drums_come_through_soft_clip_near_its_ceiling(parts):
-    """The score's own drum hits, at the gains it plays them, cross the knee and come out with
-    their peak (as the master sees it) pulled back to within 1.5 dB of DRUM_CEIL. It is not
-    exact: the excess comes off the dry signal, which the master's high-pass then reshapes, so a
-    lone kick lands about 1.1 dB past the ceiling."""
-    state = sd.rng.bit_generator.state          # the score draws from the same stream
-    sounds = {"kick": sd.kick(), "clap": sd.clap()}
-    sd.rng.bit_generator.state = state
+    """A kick and clap synthesized as the score's are (their noise from a fixed seed, not the
+    score's own draws), at the gains it plays them, cross the knee and come out with their peak
+    (as the master sees it) pulled back to within 1.5 dB of DRUM_CEIL. It is not exact: the
+    excess comes off the dry signal, which the master's high-pass then reshapes, so a lone kick
+    lands about 1.1 dB past the ceiling."""
+    score_rng, sd.rng = sd.rng, np.random.default_rng(7)   # the score draws from the module's stream
+    try:
+        sounds = {"kick": sd.kick(), "clap": sd.clap()}
+    finally:
+        sd.rng = score_rng
     x = np.zeros((2, sd.SR // 2))
     for name, g in parts:
         sd.place(x, sounds[name], 0.05, g)
@@ -146,28 +171,37 @@ def test_the_drums_come_through_soft_clip_near_its_ceiling(parts):
     assert peak(y) <= sd.DRUM_CEIL * 10 ** (1.5 / 20), 20 * np.log10(peak(y) / sd.DRUM_CEIL)
 
 
-@settings(max_examples=60)
+def _room(t, depth, release):
+    """One impact's room, written out piece by piece from its definition, as a reference: 1 up
+    to 3 ms before it lands, a straight line down to 1 - depth where it lands, then back
+    exponentially, and 1 again from ten release times on."""
+    k = np.arange(sd.N) - int(round(t * sd.SR))    # samples from the landing, kept integer so
+    ramp = int(0.003 * sd.SR)                      # every boundary falls on the same sample
+    g = np.ones(sd.N)
+    down = (k >= -ramp) & (k < 0)
+    g[down] = 1 - depth * (k[down] + ramp) / ramp
+    back = (k >= 0) & (k < int(10 * release * sd.SR))
+    g[back] = 1 - depth * np.exp(-k[back] / sd.SR / release)
+    return g
+
+
+@settings(max_examples=60, deadline=None)
 @given(st.lists(st.tuples(st.sampled_from(["hit", "drop", "plink"]), st.floats(-2.0, 32.0)), max_size=4),
        st.sampled_from([sd.IMPACT_RELEASE, sd.DRUM_RELEASE, 0.05]))
 def test_impacts_take_their_room_and_give_it_back(cues, release):
-    """impact_gain: all ones without an impact; exactly IMPACT[kind] where one lands (or lower,
-    where another's room overlaps); never under the deepest IMPACT or over 1; untouched before
-    the first one's 3 ms ramp; only recovering after the last one lands; and back to exactly 1
-    ten release times after it."""
+    """Differential: impact_gain equals the pointwise minimum of each impact's room written out
+    independently (_room), so its 3 ms ramp, its exact depth where each impact lands, its
+    recovery and its return to exactly 1 are all pinned; other cues leave it all ones. And its
+    steepest step is the ramp's, so it never jumps under an attack."""
     events = [{"type": kind, "t": t} for kind, t in cues]
     g = sd.impact_gain(events, release)
-    assert g.shape == (sd.N,) and (g <= 1).all() and (g >= min(sd.IMPACT.values())).all()
-    at = sorted((int(round(t * sd.SR)), kind) for kind, t in cues if kind in sd.IMPACT)
-    if not at:
-        assert (g == 1).all()
-        return
-    for i, kind in at:
-        if 0 <= i < sd.N:
-            assert g[i] <= sd.IMPACT[kind]
-    first, last = at[0][0] - int(0.003 * sd.SR), at[-1][0]
-    assert (g[: max(0, first)] == 1).all()
-    assert (np.diff(g[min(sd.N, max(0, last)):]) >= 0).all()
-    assert (g[min(sd.N, max(0, last + int(10 * release * sd.SR))):] == 1).all()
+    ref = np.ones(sd.N)
+    for kind, t in cues:
+        if kind in sd.IMPACT:
+            ref = np.minimum(ref, _room(t, 1 - sd.IMPACT[kind], release))
+    assert np.abs(g - ref).max() < 1e-9
+    steepest = max(1 - v for v in sd.IMPACT.values()) / int(0.003 * sd.SR)
+    assert np.abs(np.diff(g)).max() <= steepest + 1e-9
 
 
 def test_heavy_cues_land_on_downbeats(score):

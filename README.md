@@ -68,9 +68,9 @@ These hold for every input, and `bun run test` plus CI check them (`tests/`, `.g
 | Rebuilding `video.json` from `data/` is a no-op | round-trip | CI |
 | Easings map 0→0 and 1→1 and (except the intended `outBack` overshoot) stay in [0, 1] and never decrease; progress and envelopes stay in [0, 1]; the seeded PRNG is deterministic and in [0, 1); number formatting round-trips | property-based (fast-check) | `util.test.js` |
 | A fresh page and a page that played the film up to *t* draw identical pixels, in both layouts | determinism | `tools/determinism.mjs`, CI |
-| Panning keeps power; synthesis is bit-identical across runs; the master is −14 ± 0.5 LUFS with true peak ≤ −2 dBTP and clean edges | property-based (Hypothesis), mastering | `test_soundtrack.py` |
-| The limiter only catches stray peaks: no 10 ms window cut by more than 3 dB and at most 1% by more than 1 dB, and no cue starts in a window cut by more than 1 dB; every swoosh sits 6 ± 0.3 LU under the music after the master | bounds, measured on the returned audio | `test_soundtrack.py` |
-| The drum soft clip returns its input bit for bit below the knee; an impact's room is exactly its depth where it lands, only recovers after the last one, and is exactly 1 elsewhere | property-based (Hypothesis) | `test_soundtrack.py` |
+| Panning keeps power; synthesis is bit-identical across runs; the master is −14 ± 0.5 LUFS with true peak ≤ −2 dBTP as its 4× meter reads it (about −1.8 at 16×) and clean edges | property-based (Hypothesis), mastering | `test_soundtrack.py` |
+| The limiter only catches stray peaks: no 10 ms window cut by more than 3 dB and at most 1% by more than 1 dB, and no felt-mallet cue (lock, ping, statistic, plink, decile) starts in a window cut by more than 1 dB; every swoosh sits 6 ± 0.3 LU under the music after the master | bounds, measured on the returned audio | `test_soundtrack.py` |
+| The drum soft clip returns a signal that never reaches its knee bit for bit, and touches nothing further than the resampling filter's reach from a peak; an impact's room equals an independent piecewise reference (3 ms ramp, exact depth where it lands, exponential return, exactly 1 after ten release times) | property-based (Hypothesis), differential | `test_soundtrack.py` |
 
 ## How it's made
 
