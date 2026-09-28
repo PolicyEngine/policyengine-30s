@@ -56,7 +56,7 @@ The compute scripts build single households from a `situation` and never load a 
 | Nation | "Now all of the UK." | Scope. The map draws all 650 July 2024 Westminster constituencies (`geography.json`, ONS, OGL v3.0). | — |
 | Nation | "£22 billion net cost in 2026-27", "75.9% of households gain", "66,800 fewer children in poverty" | `national.json`: net Exchequer cost £22.14bn (income tax forgone £22.82bn, less £0.60bn Universal Credit and £0.08bn Pension Credit withdrawn); 75.92% of households gain over £1; children in absolute poverty after housing costs fall from 16.98% to 16.55%, 66,840 children | `test_national_figures_are_the_run`, `test_national_accounting_closes` |
 | Map | "Each dot: a household drawn by weight, placed at random in its assigned constituency (in Northern Ireland, anywhere in Northern Ireland)" | 12,000 draws by household weight (`numpy default_rng(20260925)`, 5,429 distinct households). Great Britain households carry `constituency_code_oa` in the dataset; Northern Ireland households (2.5% of households, 282 draws) carry none, so their dots fall anywhere in NI. | `test_every_draw_has_a_place` (local), `test_the_survey_sample_stays_out_of_git` |
-| Deciles | "Average change per household by income decile", £168 in the lowest decile to £1,635 in the highest | policyengine.py `economic_impact_analysis` household net income deciles, re-derived from the household rows to the penny in `national.py` | `test_national_figures_are_the_run` |
+| Deciles | "Average change per household by income decile", £168 in the lowest decile to £1,635 in the highest | policyengine.py `economic_impact_analysis`: households ranked by baseline household net income (not equivalised) into ten groups holding equal numbers of people (household weight × household size); each bar averages households' change in net income by household weight. Re-derived from the household rows to the penny in `national.py` | `test_national_figures_are_the_run` |
 | Curve tag | "policyengine.py 6.1.1 · static", bottom right of the chart | The version the sweep recorded. "Static" is checked: only `income_tax` and `universal_credit` move in the exact decomposition of net income, so earnings do not respond. The same curve on policyengine-uk 2.102.0 is in `compute/`. | `test_curve_tag_names_the_run_that_drew_it` |
 | Map tag | "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static" / "poverty: absolute, after housing costs" / "Source: Office for National Statistics licensed under the Open Government Licence v.3.0" / "Contains OS data © Crown copyright and database right 2024", bottom right of the map | ONS's two required statements for its boundaries, verbatim from `geography.json → meta.attribution_notes` | `test_mock_parts_are_flagged_and_placeable` |
 | Close | Wordmark, tagline, "Free and open source · policyengine.org"; nothing below | — | — |
@@ -79,11 +79,19 @@ The compute scripts build single households from a `situation` and never load a 
   - rebuilding `video.json` is a no-op;
   - property-based tests of the range rounding and plateau detection.
 
+## Survey data: citation and licence
+
+The national figures rest on the Family Resources Survey, cited as its UK Data Service catalogue entry specifies (read 2026-09-27, https://datacatalogue.ukdataservice.ac.uk/studies/study/9563):
+
+> Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025. [data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1. © Crown copyright.
+
+The End User Licence (clause 11) requires that citation in any publication "whether printed, electronic or broadcast", so the film carries it in the small print under the decile chart. policyengine-uk-data's enhancement also imputes variables from the Wealth and Assets Survey, the Living Costs and Food Survey, the Effects of Taxes and Benefits data and HMRC's Survey of Personal Incomes (its `docs/imputations.md`; the code loads `spi_2022_23`). The package does not pin those collections' study numbers, so their citations are left to PolicyEngine's registered user. Clause 12 also asks for the bibliographic details of published work to be sent to the UK Data Service.
+
 ## The national run
 
 `tools/uk/national.py` runs policyengine.py 6.1.1's UK flow on its certified dataset:
 - **Dataset.** `enhanced_frs_2024_25.h5` from `policyengine/policyengine-uk-data-private` at 1.56.16. Its sha256 (`e433e532…`) matches policyengine.py 6.1.1's release manifest. `ensure_datasets` uprates it to 2026: 52,846 households, 113,617 people, 31.46 million weighted households.
-- **Reform.** Personal allowance £15,000 from 2026-01-01. policyengine-uk labels fiscal year 2026-27 as 2026 and reads it at 1 January; a start of 6 April 2026 leaves the run on current law (checked). The run asserts every person's allowance moved from £12,570 to £15,000 and nobody's fell.
+- **Reform.** Personal allowance £15,000 from 2026-01-01. policyengine-uk labels fiscal year 2026-27 as 2026 and reads it at 1 January; a start of 6 April 2026 leaves the run on current law (checked). The run asserts the allowance the model applied rose to at most £15,000 (from at most £12,570) and fell for nobody. 1,580 records have no allowance in either run; every one has adjusted net income above £130,000, where the £100,000 taper removes even a £15,000 allowance.
 - **Static.** No labour-supply elasticities are set.
 - **Checks.** Income tax and Universal Credit changes agree between policyengine.py's programme statistics and the script's own weighted sums. Decile averages agree with a recomputation from household rows to the penny. Households' total gain equals the net Exchequer cost within 0.5%.
 
@@ -105,7 +113,7 @@ The compute scripts build single households from a `situation` and never load a 
   | Absolute, before housing costs | 11.78% | 11.39% | 59,863 fewer |
   | Relative, after housing costs | 26.15% | 26.93% | 120,367 more |
   | Relative, before housing costs | 19.40% | 20.28% | 136,071 more |
-- **Households that lose.** 12 records (19,514 weighted households, 0.06%) lose over £1: their Pension Credit and Housing Benefit fall by more than their tax cut (unweighted over those records: income tax −£5,532, Pension Credit −£1,627, Housing Benefit −£18,206). Housing Benefit is outside policyengine.py's UK programme list, which is why households' total gain (£22.128bn) sits £11m under the net cost (£22.139bn).
+- **Households that lose.** 12 records (19,514 weighted households, 0.06%) lose over £1: their Pension Credit and Housing Benefit fall by more than their tax cut (unweighted over those records: income tax −£5,532, Pension Credit −£1,627, Housing Benefit −£18,206). Households' total gain (£22.128bn) sits £11.4m under the net cost (£22.139bn). Housing Benefit, which is outside policyengine.py's UK programme list, falls by £10.1m (weighted) and accounts for most of the gap; the remaining £1.3m is other programmes outside the list.
 - **Net cost** counts income tax, National Insurance and the benefits in policyengine.py's UK programme list. National Insurance does not move.
 
 ## Layout notes for `site/` (not edited from here)

@@ -58,3 +58,28 @@ jobs:
         with:
           name: determinism-frames
           path: frames/determinism/
+
+  us-film-unchanged:
+    # Work on another country must not move a single US pixel. A PR that means to change the US film
+    # carries the us-film-changes label, and the job is skipped.
+    name: The US film is unchanged against the base branch
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'us-film-changes')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.12
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run build
+      - name: Build the base branch alongside
+        run: |
+          git worktree add ../base ${{ github.event.pull_request.base.sha }}
+          cd ../base && bun install --frozen-lockfile && bun build site/main.js --outfile site/bundle.js --format iife
+      - run: node tools/compare_revisions.mjs ../base us 1920x1080,1080x1920 0.2

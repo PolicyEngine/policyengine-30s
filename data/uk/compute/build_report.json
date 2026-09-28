@@ -44,7 +44,10 @@
     "Contains OS data © Crown copyright and database right 2024"
    ],
    "deciles": [
-    "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static"
+    "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static",
+    "Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025.",
+    "[data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1",
+    "© Crown copyright"
    ]
   },
   "nation_stats": [

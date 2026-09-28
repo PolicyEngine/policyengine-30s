@@ -113,7 +113,7 @@ function layout() {
       gain: { x: 760, y: 745, size: 124 },
       capTop: { x: 120, y: 96, w: 1200, size: 64 },
       mapBox: COUNTRY === "uk" ? [[1060, 235], [1800, 900]] : [[660, 290], [1800, 960]],
-      chart: [[330, 330], [1590, 880]],
+      chart: COUNTRY === "uk" ? [[330, 330], [1590, 840]] : [[330, 330], [1590, 880]],
       stats: { x: 120, y: 330, gap: 200 },
       legend: { x: 120, y: 184 },
       logo: { cx: W / 2, cy: H / 2 - 70, w: 1000 },
@@ -487,7 +487,9 @@ function measure() {
   css(code, { opacity: 1, transform: "none" });
   const vr = rectOf(codeVal);
   M.val = vr;
-  M.valFont = M.codeFont;
+  // the flying value lands at the code panel's size. The US film keeps its original 22 px target
+  // (portrait CSS sets the panel to 21 px); other countries follow the panel, which may have shrunk to fit
+  M.valFont = COUNTRY === "us" ? 22 : M.codeFont;
   M.codeRect = rectOf(code);
   M.ref = rectOf(codeRefLine);
   // when the playhead reaches the pinned earnings level (solved once, so frames stay history-free)
@@ -1133,9 +1135,13 @@ function mockSample() {
 function mockAreaSample() {
   const rnd = mulberry32(99);
   const codes = (V.cdGeo || []).map((d) => d.geoid);
-  return Array.from({ length: 12000 }, () => {
+  const regions = Object.keys(V.sampleRegions || {});
+  return Array.from({ length: 12000 }, (_, i) => {
+    const gain = rnd() < 0.3 ? (V.nation.step || 800) * (1 + Math.floor(rnd() * 3)) : 0;
+    // every 40th row uses a region fallback (UK: Northern Ireland), so a clone exercises that path too
+    if (regions.length && i % 40 === 0) return [regions[0], gain, null, 1 + Math.floor(rnd() * 10)];
     const c = codes[Math.floor(rnd() * codes.length)];
-    return [c, rnd() < 0.3 ? (V.nation.step || 800) * (1 + Math.floor(rnd() * 3)) : 0, c, 1 + Math.floor(rnd() * 10)];
+    return [c, gain, c, 1 + Math.floor(rnd() * 10)];
   });
 }
 

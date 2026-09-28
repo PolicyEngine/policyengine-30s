@@ -63,6 +63,15 @@ def fiscal_label(year):
 NI = "NI"            # sample key for Northern Ireland households, which carry no constituency code
 POVERTY = "absolute_ahc"   # fixed line, like the US SPM thresholds; the relative line moves with the reform's median
 POVERTY_LABEL = "poverty: absolute, after housing costs"
+# The UK Data Service End User Licence (clause 11) requires any publication based on the data,
+# "printed, electronic or broadcast", to cite the collection in the form its metadata specifies.
+# Verbatim from https://datacatalogue.ukdataservice.ac.uk/studies/study/9563 (read 2026-09-27),
+# split in two for the chart's small print. The film travels without the README, so it carries this.
+FRS_CITATION = [
+    "Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025.",
+    "[data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1",
+    "© Crown copyright",
+]
 SAMPLE_FILE = "private/sample_video.json"
 
 
@@ -329,7 +338,8 @@ def main():
             # boundaries, whose licence requires both statements wherever they are used (the video
             # travels without the README)
             "nation": [national_run, POVERTY_LABEL, *boundary_statements(geo)],
-            "deciles": [national_run],
+            # the decile bars rest wholly on the survey, so the collection's citation sits under them
+            "deciles": [national_run, *FRS_CITATION],
         },
         "statute": {
             "wall": st["wall_text"],

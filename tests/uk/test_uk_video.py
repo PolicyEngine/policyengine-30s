@@ -197,7 +197,11 @@ def test_national_figures_are_the_run(v, nat):
     """Each stat, bar and label is read from national.json, at the precision shown."""
     assert v["mock"] is False and v["mock_parts"] == []
     b, w = nat["budget"], nat["winners"]
-    child = nat["poverty"]["absolute_ahc"]["children_under_18"]["children_lifted_out"]
+    pov = nat["poverty"]["absolute_ahc"]["children_under_18"]
+    # the count and its direction come from the two headcounts themselves, not the stored difference
+    child = pov["headcount_baseline"] - pov["headcount_reform"]
+    assert abs(child - pov["children_lifted_out"]) < 1e-6
+    assert (child > 0) == (pov["rate_reform"] < pov["rate_baseline"])
     cost, share, kids = v["nation"]["stats"]
     assert cost == {"kind": "billion", "value": round(b["net_cost_2026_27_gbp"] / 1e9), "digits": 0, "what": "net cost in 2026-27"}
     assert share["value"] == round(100 * w["share_households_gaining_over_1gbp"], 1) and share["what"] == "of households gain"
@@ -234,26 +238,71 @@ def test_national_tags_name_the_run_and_the_licence(v, nat):
         "Contains OS data © Crown copyright and database right 2024",
     ]
     assert geo["meta"]["attribution_notes"]["template_verbatim"][0] == v["sources"]["nation"][2]
-    assert v["sources"]["deciles"] == [run]
+    # the survey's own citation (UK Data Service EUL clause 11), verbatim from its catalogue entry
+    assert v["sources"]["deciles"] == [
+        run,
+        "Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025.",
+        "[data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1",
+        "© Crown copyright",
+    ]
     assert "provenance" not in v
+
+
+# Every tracked file under data/uk/ and audio/uk/, each reviewed for survey-derived records. A new
+# tracked file fails here until someone checks it and adds it.
+PUBLIC_UK_FILES = {
+    "audio/uk/events.json",
+    "data/uk/README.md", "data/uk/amount.yaml", "data/uk/amount.yaml.commit", "data/uk/code_source.json",
+    "data/uk/compute/build_report.json", "data/uk/compute/crosscheck.json",
+    "data/uk/compute/earnings_sweep_pe-uk-2.102.0.json", "data/uk/compute/rent_sensitivity.json",
+    "data/uk/earnings_sweep.json", "data/uk/geography.json", "data/uk/geography_check.json",
+    "data/uk/national.json", "data/uk/quote.json", "data/uk/statute.json", "data/uk/video.json",
+}
+CODE = re.compile(r"^(?:[EWSN]\d{8}|NI)$")
+
+
+def _record_like(x, path=""):
+    """Paths of lists that look like survey rows: at least 100 short lists or dicts that each carry
+    an area code (a constituency code or "NI") next to numbers. Map geometry carries codes in dicts
+    with polygons, which is allowed."""
+    found = []
+    if isinstance(x, dict):
+        for k, y in x.items():
+            found += _record_like(y, f"{path}.{k}")
+    elif isinstance(x, list):
+        def row(r):
+            vals = list(r.values()) if isinstance(r, dict) else r if isinstance(r, list) else None
+            if vals is None or (isinstance(r, dict) and "polys" in r) or len(vals) > 8:
+                return False
+            return any(isinstance(e, str) and CODE.match(e) for e in vals) and any(isinstance(e, (int, float)) and not isinstance(e, bool) for e in vals)
+        if len(x) >= 100 and sum(map(row, x[:200])) >= 50:
+            found.append(path or "<root>")
+        for i, y in enumerate(x[:5]):
+            found += _record_like(y, f"{path}[{i}]")
+    return found
 
 
 def test_the_survey_sample_stays_out_of_git(v, nat):
     """The dots are record-level survey derivatives: video.json only names their file, the file sits
-    under data/uk/private/ (git-ignored), and nothing under it is tracked."""
+    under data/uk/private/ (git-ignored), nothing there is tracked, every tracked UK file is on the
+    reviewed list, and no tracked JSON carries rows that look like the sample."""
     assert v["sample"] is None and v["sampleFile"].startswith("private/")
     ignored = subprocess.run(["git", "check-ignore", "-q", str(UK / v["sampleFile"])], cwd=ROOT)
     assert ignored.returncode == 0
-    tracked = subprocess.run(["git", "ls-files", "data/uk/private"], cwd=ROOT, capture_output=True, text=True).stdout
-    assert tracked.strip() == ""
-    # national.json holds aggregates only: no list longer than the ten deciles
-    def longest(x):
-        if isinstance(x, dict):
-            return max([longest(y) for y in x.values()] or [0])
-        if isinstance(x, list):
-            return max([len(x)] + [longest(y) for y in x])
-        return 0
-    assert longest(nat) <= 10
+    tracked = subprocess.run(["git", "ls-files", "data/uk", "audio/uk"], cwd=ROOT, capture_output=True, text=True).stdout.split()
+    assert not [f for f in tracked if f.startswith("data/uk/private/")]
+    assert set(tracked) <= PUBLIC_UK_FILES, set(tracked) - PUBLIC_UK_FILES
+    for f in tracked:
+        if f.endswith(".json"):
+            assert _record_like(json.loads((ROOT / f).read_text())) == [], f
+
+
+def test_the_privacy_scan_catches_a_smuggled_sample(v):
+    """The scan above is not vacuous: the real sample's row shape, hidden under any key, is caught."""
+    rows = [["E14001063", 486.0, "E14001063", 5]] * 150 + [["NI", 0.0, None, 2]] * 50
+    assert _record_like({"deep": {"stuff": rows}}) == [".deep.stuff"]
+    assert _record_like({"x": [{"code": "S14000001", "gain": 972.0, "decile": 9}] * 120}) == [".x"]
+    assert _record_like({"cdGeo": v["cdGeo"]}) == []
 
 
 def test_every_draw_has_a_place(v, nat):
