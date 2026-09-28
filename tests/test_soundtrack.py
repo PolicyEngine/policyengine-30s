@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from scipy.signal import resample_poly
 
 import soundtrack as sd
 from conftest import ROOT
@@ -70,6 +71,103 @@ def test_mastering_hits_platform_targets(score):
     ramp = np.linspace(0, 1, edge) * 10 ** (-2.0 / 20) + 1e-9
     assert (mix[:, 0] == 0).all() and (mix[:, -1] == 0).all()
     assert (np.abs(mix[:, :edge]) <= ramp).all() and (np.abs(mix[:, -edge:]) <= ramp[::-1]).all()
+
+
+def _limiter_cut(mix, stems):
+    """Measured on the returned audio: the master's gain against the mix it was given (the
+    stems before it, through its 30 Hz high-pass) in 10 ms windows, clear of the 30 ms edge
+    fades, in dB under the loudness normalization. That is the largest window gain: every
+    window gets it, and the limiter only takes away. Returns window start times and cuts."""
+    pre = sd.hp(stems["bed_pre"] + stems["sweeps_pre"], 30)
+    w = int(0.010 * sd.SR)
+    n = sd.N // w
+    edge = int(0.03 * sd.SR) // w   # the fades span three windows at each end
+
+    def rms(x):
+        return np.sqrt((x[:, : n * w].reshape(2, n, w) ** 2).mean(axis=(0, 2)))[edge: n - edge]
+    gain = 20 * np.log10(rms(mix) / rms(pre))
+    return np.arange(edge, n - edge) * w / sd.SR, gain.max() - gain
+
+
+def test_the_limiter_only_catches_stray_peaks(score):
+    """The -2 dBTP limiter is a safety net. When a kick and clap landing together went 4-6.5 dB
+    past it, and the hit and drop 6-7.5 dB, it cut the whole mix with them: 13% of windows by
+    more than 1 dB and 4% by more than 3 dB, so the pad and arp pumped on every backbeat.
+    Those peaks are now shaped where they are made, and the limiter shaves strays."""
+    _, mix, _, stems = score
+    _, cut = _limiter_cut(mix, stems)
+    assert cut.max() <= 3.0 and (cut > 1.0).mean() <= 0.01, (cut.max(), (cut > 1.0).mean())
+
+
+def test_no_cue_lands_in_a_limiter_dip(score):
+    """The cues that carry the story keep the level they were written at: none starts in a
+    window the limiter cut by more than 1 dB. The third statistic used to land on a backbeat
+    and lose 6 dB, where its two siblings lost under 2."""
+    events, mix, _, stems = score
+    at, cut = _limiter_cut(mix, stems)
+    cues = [e for e in events if e["type"] in ("lock", "ping", "stat", "plink", "decile")]
+    assert len(cues) > 20
+    for e in cues:
+        first = (at > e["t"] - 0.01) & (at < e["t"] + 0.02)   # the windows its first 20 ms fall in
+        assert cut[first].max() <= 1.0, (e, cut[first].max())
+
+
+@settings(max_examples=40)
+@given(st.integers(0, 2**32 - 1), st.floats(0.05, 0.99), st.floats(40, 4000))
+def test_soft_clip_leaves_what_stays_under_the_knee_alone(seed, level, lo):
+    """Wherever nothing reaches the knee, as the master will see it (through its high-pass, at
+    4x), soft_clip returns its input bit for bit."""
+    x = sd.bp(np.random.default_rng(seed).standard_normal((2, sd.SR // 10)), lo, min(20000, 4 * lo))
+    x *= level * sd.DRUM_KNEE / np.abs(resample_poly(sd.hp(x, 30), 4, 1, axis=-1)).max()
+    assert np.array_equal(sd.soft_clip(x, sd.DRUM_CEIL, sd.DRUM_KNEE), x)
+
+
+@pytest.mark.parametrize("parts", [
+    [("kick", 0.6)],                                                     # a kick on its own
+    [("kick", 0.6 * sd.BACKBEAT), ("clap", 0.4 * sd.BACKBEAT)],          # backbeats, 8.5-14 s
+    [("kick", 0.6 * sd.BACKBEAT), ("clap", 0.55 * sd.BACKBEAT)],         # backbeats, 14-26 s
+])
+def test_the_drums_come_through_soft_clip_near_its_ceiling(parts):
+    """The score's own drum hits, at the gains it plays them, cross the knee and come out with
+    their peak (as the master sees it) pulled back to within 1.5 dB of DRUM_CEIL. It is not
+    exact: the excess comes off the dry signal, which the master's high-pass then reshapes, so a
+    lone kick lands about 1.1 dB past the ceiling."""
+    state = sd.rng.bit_generator.state          # the score draws from the same stream
+    sounds = {"kick": sd.kick(), "clap": sd.clap()}
+    sd.rng.bit_generator.state = state
+    x = np.zeros((2, sd.SR // 2))
+    for name, g in parts:
+        sd.place(x, sounds[name], 0.05, g)
+
+    def peak(y):
+        return np.abs(resample_poly(sd.hp(y, 30), 4, 1, axis=-1)).max()
+    y = sd.soft_clip(x, sd.DRUM_CEIL, sd.DRUM_KNEE)
+    assert peak(x) > sd.DRUM_CEIL and peak(y) < peak(x)
+    assert peak(y) <= sd.DRUM_CEIL * 10 ** (1.5 / 20), 20 * np.log10(peak(y) / sd.DRUM_CEIL)
+
+
+@settings(max_examples=60)
+@given(st.lists(st.tuples(st.sampled_from(["hit", "drop", "plink"]), st.floats(-2.0, 32.0)), max_size=4),
+       st.sampled_from([sd.IMPACT_RELEASE, sd.DRUM_RELEASE, 0.05]))
+def test_impacts_take_their_room_and_give_it_back(cues, release):
+    """impact_gain: all ones without an impact; exactly IMPACT[kind] where one lands (or lower,
+    where another's room overlaps); never under the deepest IMPACT or over 1; untouched before
+    the first one's 3 ms ramp; only recovering after the last one lands; and back to exactly 1
+    ten release times after it."""
+    events = [{"type": kind, "t": t} for kind, t in cues]
+    g = sd.impact_gain(events, release)
+    assert g.shape == (sd.N,) and (g <= 1).all() and (g >= min(sd.IMPACT.values())).all()
+    at = sorted((int(round(t * sd.SR)), kind) for kind, t in cues if kind in sd.IMPACT)
+    if not at:
+        assert (g == 1).all()
+        return
+    for i, kind in at:
+        if 0 <= i < sd.N:
+            assert g[i] <= sd.IMPACT[kind]
+    first, last = at[0][0] - int(0.003 * sd.SR), at[-1][0]
+    assert (g[: max(0, first)] == 1).all()
+    assert (np.diff(g[min(sd.N, max(0, last)):]) >= 0).all()
+    assert (g[min(sd.N, max(0, last + int(10 * release * sd.SR))):] == 1).all()
 
 
 def test_heavy_cues_land_on_downbeats(score):
@@ -160,16 +258,15 @@ def test_mastered_stems_are_the_score(score):
 
 def test_sweeps_sit_under_the_music_in_the_mastered_score(score):
     """The same margin through the master's shared gain envelope, bounded on both sides so a
-    muted or halved sweep fails as surely as a loud one. Where the limiter works inside a
-    sweep's window it trims the margin: the swell shares its window with a kick and clap at
-    25.5 s and lands near 4.6 LU; every other sweep stays within half an LU of 6."""
+    muted or halved sweep fails as surely as a loud one. Only limiting inside a sweep's window
+    could move it, and with the drums shaped at the source there is none worth the name: the
+    swell, which shares its window with a kick and clap at 25.5 s, used to land near 4.6 LU."""
     events, _, report, stems = score
     kinds = [e["type"] for e in events if e["type"] in SWEEPS]
     for r, kind in zip(report, kinds):
         i, w = r["window_start"], r["window_len"]
         under = _loudness(stems["bed"], i, w) - _loudness(stems["sweeps"], i, w)
-        floor = 4.3 if kind == "swell" else sd.SWEEP_UNDER - 0.5
-        assert floor <= under <= sd.SWEEP_UNDER + 0.3, (r["t"], kind, under)
+        assert abs(under - sd.SWEEP_UNDER) <= 0.3, (r["t"], kind, under)
 
 
 @settings(max_examples=15, deadline=None)
