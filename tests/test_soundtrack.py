@@ -101,12 +101,12 @@ def test_the_limiter_only_catches_stray_peaks(score):
     assert cut.max() <= 3.0 and (cut > 1.0).mean() <= 0.01, (cut.max(), (cut > 1.0).mean())
 
 
-def test_no_cue_lands_in_a_limiter_dip(score):
+def test_no_felt_mallet_cue_lands_in_a_limiter_dip(score):
     """The felt-mallet cues that carry the story (the lock, pings, statistics, plinks and decile
     notes) keep the level they were written at: none starts in a window the limiter cut by more
     than 1 dB. The third statistic used to land on a backbeat and lose 6 dB, where its two
     siblings lost under 2. (The typing clicks are not held to this: one at 7.03 s, on a kick,
-    still loses about 1.1 dB, as it did before.)"""
+    still loses about 1.2 dB, as it did before.)"""
     events, mix, _, stems = score
     at, cut = _limiter_cut(mix, stems)
     cues = [e for e in events if e["type"] in ("lock", "ping", "stat", "plink", "decile")]
@@ -294,7 +294,7 @@ def test_sweeps_sit_under_the_music_in_the_mastered_score(score):
     """The same margin through the master's shared gain envelope, bounded on both sides so a
     muted or halved sweep fails as surely as a loud one. Only limiting inside a sweep's window
     could move it, and with the drums shaped at the source there is none worth the name: the
-    swell, which shares its window with a kick and clap at 25.5 s, used to land near 4.6 LU."""
+    swell, which shares its window with a kick and clap at 25.5 s, used to land near 4.8 LU."""
     events, _, report, stems = score
     kinds = [e["type"] for e in events if e["type"] in SWEEPS]
     for r, kind in zip(report, kinds):
