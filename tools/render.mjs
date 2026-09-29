@@ -26,6 +26,10 @@ async function newPage() {
   page.on("pageerror", (e) => console.error("pageerror:", e.message));
   await page.goto(pageUrl);
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
+  // a citation chip that found no clear place would sit on text: fail rather than render it
+  const chips = await page.evaluate(() => window.__chips);
+  const stuck = Object.entries(chips || {}).filter(([, c]) => c.stuck).map(([k]) => k);
+  if (stuck.length) throw new Error(`no clear place for the citation chip (${stuck.join(", ")}) at ${W}x${H} ${COUNTRY}`);
   return page;
 }
 

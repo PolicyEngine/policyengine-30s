@@ -27,13 +27,13 @@
    "python": "3.13.9"
   },
   "runtime_seconds": {
-   "imports": 2.6,
-   "dataset": 6.7,
-   "economic_impact_analysis": 16.0,
-   "child_poverty": 16.1,
-   "budget": 16.1,
-   "aggregates": 16.2,
-   "sample": 16.2
+   "imports": 3.4,
+   "dataset": 12.7,
+   "economic_impact_analysis": 31.0,
+   "child_poverty": 31.3,
+   "budget": 31.4,
+   "aggregates": 31.4,
+   "sample": 31.5
   },
   "script": "tools/uk/national.py",
   "licence_note": "aggregates only; the underlying FRS microdata stay in data/uk/private/"
@@ -227,7 +227,31 @@
     "relative_change_percent": 0.8874295484857148
    }
   ],
-  "definition": "policyengine.py household_net_income deciles (economic_impact_analysis)"
+  "definition": "policyengine.py household_net_income deciles (economic_impact_analysis)",
+  "grouping_check": {
+   "households_grouped_as_policyengine_py": 52846,
+   "households_left_out_negative_income": 460,
+   "weighted_households_left_out": 217822.151799798,
+   "people_share_by_decile": [
+    0.0952950480567585,
+    0.0999712539450852,
+    0.09952810937067764,
+    0.10011291850654212,
+    0.10004200083321464,
+    0.10031199604270397,
+    0.09977133297136813,
+    0.099455021957545,
+    0.0994240723012874,
+    0.1013841283435307
+   ]
+  }
+ },
+ "allowance": {
+  "records_with_no_allowance_in_either_run": 1580,
+  "weighted_people_with_no_allowance_in_either_run": 1019797.5337522328,
+  "lowest_adjusted_net_income_among_them": 130099.78125,
+  "records_whose_allowance_rose": 112037,
+  "records_whose_allowance_rose_by_the_full_2430": 111917
  },
  "poverty": {
   "absolute_bhc": {

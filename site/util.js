@@ -51,3 +51,27 @@ export function statText(s, { cur = "$" } = {}) {
   if (s.kind === "pct") return `${v}<span class="u" style="margin-left:0.04em">%</span>`;
   return fmt(s.value);
 }
+
+// do rects a and b come within m of each other (m < 0: overlap by more than -m)
+export const hits = (a, b, m) => a.x < b.x + b.w + m && b.x < a.x + a.w + m && a.y < b.y + b.h + m && b.y < a.y + a.h + m;
+
+// A chip sits where it was designed to unless text overlaps it there; then it takes the nearest offset
+// (dx, dy) that clears every obstacle by `margin` and stays inside `inside` in every frame it shows, at
+// full size if any offset allows, else at the largest of `scales` that does. frames: [{ at: (dx, dy, k)
+// => the chip's drawn rect, obstacles: [rects], inside: rect }]. Solved once, so frames stay
+// history-free. Where the design position is clear (the US film) the result is exactly (0, 0, 1).
+export function clearOffset(frames, { dxs, dys, margin, scales = [1] }) {
+  const ok = (dx, dy, k, m) => frames.every((f) => {
+    const r = f.at(dx, dy, k), b = f.inside;
+    if (r.x < b.x || r.y < b.y || r.x + r.w > b.x + b.w || r.y + r.h > b.y + b.h) return false;
+    return !f.obstacles.some((o) => hits(r, o, m));
+  });
+  if (ok(0, 0, 1, 0)) return { dx: 0, dy: 0, k: 1, moved: false };
+  const cands = [];
+  for (const dx of dxs) for (const dy of dys) cands.push([dx, dy, dx * dx + dy * dy]);
+  cands.sort((p, q) => p[2] - q[2] || p[1] - q[1] || p[0] - q[0]);
+  for (const k of scales) for (const [dx, dy] of cands) if (ok(dx, dy, k, margin)) return { dx, dy, k, moved: true };
+  return { dx: 0, dy: 0, k: 1, moved: false, stuck: true };
+}
+// lo, lo + by, ... up to hi
+export const steps = (lo, hi, by) => Array.from({ length: Math.floor((hi - lo) / by) + 1 }, (_, i) => lo + i * by);

@@ -10,7 +10,8 @@ policyengine-uk, 2.102.3), the same flow as the US national run:
 
 policyengine-uk labels fiscal year 2026-27 as 2026 and reads it at 2026-01-01, so the
 reform starts there; a 2026-04-06 start silently leaves the run on current law. The run
-asserts the allowance every person was given moved from £12,570 to £15,000.
+asserts that the largest allowance the model applied moved from £12,570 to £15,000 and that
+nobody's fell; allowances tapered above £100,000 of adjusted net income move by less or not at all.
 
 The dataset is UK survey microdata (Family Resources Survey, UK Data Service End User
 Licence). Only aggregates leave data/uk/private/: data/uk/national.json is committed; the
@@ -70,17 +71,21 @@ MODEL = versions()["policyengine-uk"]
 assert manifest.certification.certified_for_model_version == MODEL, (manifest.certification, MODEL)
 # ensure_datasets reuses any uprated year file it finds, whichever install built it. Uprating runs
 # policyengine.py's create_datasets on policyengine-uk's model, so a file left by other versions would
-# carry their 2026 into this run. A stamp beside it names the builder; on a mismatch it is rebuilt.
+# carry their 2026 into this run. A stamp beside it names the builder and the file's sha256; the file
+# is reused only when both match, so a file rewritten by anything else (an older checkout of this
+# script, a direct create_datasets call) is rebuilt too. The stamp goes with the file it describes.
 year_file = PRIVATE / f"enhanced_frs_2024_25_year_{YEAR}.h5"
 stamp = year_file.with_suffix(".built_with.json")
 BUILDER = {k: versions()[k] for k in ("policyengine", "policyengine-uk")}
-if year_file.exists() and (not stamp.exists() or json.loads(stamp.read_text()) != BUILDER):
-    year_file.unlink()
+sha_of = lambda f: hashlib.sha256(f.read_bytes()).hexdigest()
+if not (year_file.exists() and stamp.exists() and json.loads(stamp.read_text()) == {**BUILDER, "sha256": sha_of(year_file)}):
+    year_file.unlink(missing_ok=True)
+    stamp.unlink(missing_ok=True)
 datasets = ensure_datasets(years=[YEAR], data_folder=str(PRIVATE))
 assert len(datasets) == 1, list(datasets)
 dataset_key, dataset = next(iter(datasets.items()))
 assert year_file.exists(), year_file
-stamp.write_text(json.dumps(BUILDER) + "\n")
+stamp.write_text(json.dumps({**BUILDER, "sha256": sha_of(year_file)}) + "\n")
 source = PRIVATE / "enhanced_frs_2024_25.h5"
 source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
 EXPECTED_SHA = "e433e532b17bd8ce76030156285816e33d44e93edabd2204adbef71d19a68712"  # policyengine-uk-data 1.56.16
@@ -101,7 +106,7 @@ reform_policy = Policy(
 )
 EXTRA = {
     "household": ["region", "hbai_household_net_income"],
-    "person": ["personal_allowance", "income_tax", "national_insurance"],
+    "person": ["personal_allowance", "adjusted_net_income", "income_tax", "national_insurance"],
     "benunit": ["universal_credit", "pension_credit", "housing_benefit"],
 }
 baseline = Simulation(dataset=dataset, tax_benefit_model_version=uk_latest, extra_variables=EXTRA)
@@ -124,6 +129,18 @@ assert (p_b["person_id"].values == p_r["person_id"].values).all()
 pa_b, pa_r = f64(p_b["personal_allowance"]), f64(p_r["personal_allowance"])
 assert pa_b.max() == 12_570 and pa_r.max() == PA_NEW, (pa_b.max(), pa_r.max())
 assert np.all(pa_r >= pa_b - 1e-6), "someone's allowance fell"
+# who has no allowance at all: the taper takes the whole £15,000 once adjusted net income (less
+# grossed-up Gift Aid) reaches £100,000 + 2 x £15,000
+no_pa = (pa_b == 0) & (pa_r == 0)
+ani = f64(p_b["adjusted_net_income"])
+allowance = {
+    "records_with_no_allowance_in_either_run": int(no_pa.sum()),
+    "weighted_people_with_no_allowance_in_either_run": float(f64(p_b["person_weight"])[no_pa].sum()),
+    "lowest_adjusted_net_income_among_them": float(ani[no_pa].min()) if no_pa.any() else None,
+    "records_whose_allowance_rose": int((pa_r > pa_b + 1e-6).sum()),
+    "records_whose_allowance_rose_by_the_full_2430": int((np.abs(pa_r - pa_b - (PA_NEW - 12_570)) < 1e-6).sum()),
+}
+assert allowance["lowest_adjusted_net_income_among_them"] is None or allowance["lowest_adjusted_net_income_among_them"] >= 100_000 + 2 * PA_NEW
 
 hw, pw, bw = f64(hh_b["household_weight"]), f64(p_b["person_weight"]), f64(bu_b["benunit_weight"])
 total_households = float(hw.sum())
@@ -197,9 +214,27 @@ assert [r["decile"] for r in dec] == list(range(1, 11)), [r["decile"] for r in d
 prep = _prepare_decile_analysis(baseline, reform, income_variable="household_net_income", decile_variable=None,
                                 entity="household", quantiles=10)
 decile_of = np.asarray(prep.groups.fillna(-1).astype(int))
-# differential: the decile averages recomputed from the household rows
+# differential: the groups themselves, rebuilt from the definition rather than taken from policyengine.py.
+# Households ranked by baseline household net income, each weighted by household weight x its number of
+# people (counted here from the person table); a household's rank is the weight at or below its income
+# (ties share the rank) over the total; tenths by ceiling; negative incomes left out (-1).
+inc_b = f64(hh_b["household_net_income"])
+people = p_b.groupby("household_id").size().reindex(hh_b["household_id"].values).fillna(0).to_numpy()
+w_eff = hw * people
+vals, inv = np.unique(inc_b, return_inverse=True)
+at_or_below = np.cumsum(np.bincount(inv, weights=w_eff))[inv] / w_eff.sum()
+groups = np.clip(np.ceil(at_or_below * 10), 1, 10).astype(int)
+groups[inc_b < 0] = -1
+assert (groups == decile_of).all(), f"{int((groups != decile_of).sum())} households grouped differently"
+decile_check = {
+    "households_grouped_as_policyengine_py": int((groups == decile_of).sum()),
+    "households_left_out_negative_income": int((groups == -1).sum()),
+    "weighted_households_left_out": float(hw[groups == -1].sum()),
+    "people_share_by_decile": [float(w_eff[groups == d].sum() / w_eff.sum()) for d in range(1, 11)],
+}
+# differential: the decile averages recomputed from the household rows, within those groups
 for r in dec:
-    m = decile_of == r["decile"]
+    m = groups == r["decile"]
     mine = float(np.sum(d_net[m] * hw[m]) / np.sum(hw[m]))
     assert abs(mine - r["average_change_household_net_income"]) < 0.01, (r, mine)
 
@@ -267,7 +302,9 @@ out = {
     },
     "budget": budget,
     "winners": winners,
-    "deciles": {"by_decile": dec, "definition": "policyengine.py household_net_income deciles (economic_impact_analysis)"},
+    "deciles": {"by_decile": dec, "definition": "policyengine.py household_net_income deciles (economic_impact_analysis)",
+                "grouping_check": decile_check},
+    "allowance": allowance,
     "poverty": poverty,
     "sample": sample_meta,
 }

@@ -7,7 +7,7 @@
 import { geoAlbersUsa, geoConicConformal, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import statesTopo from "us-atlas/states-10m.json";
-import { clamp, lerp, E, P, env, mulberry32, fmt, mix, fmtYaml, statText } from "./util.js";
+import { clamp, lerp, E, P, env, mulberry32, fmt, mix, fmtYaml, statText, hits, clearOffset, steps } from "./util.js";
 
 const Q = new URLSearchParams(location.search);
 const COUNTRY = Q.get("country") || "us";
@@ -438,6 +438,23 @@ function rectOf(e) {
   return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k };
 }
 
+// the line boxes of every run of visible text under root, in stage coordinates
+function textRects(root) {
+  const s = stage.getBoundingClientRect(), k = s.width / W;
+  const out = [], range = document.createRange();
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    if (!n.nodeValue.trim()) continue;
+    range.selectNodeContents(n);
+    for (const r of range.getClientRects()) {
+      if (r.width >= 1) out.push({ x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k });
+    }
+  }
+  return out;
+}
+
+const chipScale = (o) => (o.k === 1 ? "" : ` scale(${o.k})`);
+
 // Shrink an element's font in 0.5 px steps until fits(el) holds. Deterministic: it depends
 // only on layout, never on time, and leaves anything that already fits exactly as it was.
 function fitFont(el, fits, min = 12) {
@@ -492,6 +509,7 @@ function measure() {
   M.valFont = COUNTRY === "us" ? 22 : M.codeFont;
   M.codeRect = rectOf(code);
   M.ref = rectOf(codeRefLine);
+  placeChips(wr);
   // when the playhead reaches the pinned earnings level (solved once, so frames stay history-free)
   M.curveLen = curvePath.getTotalLength();
   const pinX = M.gx(V.household.curve.pin[0]);
@@ -501,6 +519,43 @@ function measure() {
     if (curvePath.getPointAtLength(M.curveLen * E.inOutSine(mid)).x < pinX) lo = mid; else hi = mid;
   }
   M.pinT = lerp(T.curveA, T.curveB, hi);
+}
+
+// Where the citation chip goes in its two scenes (see clearOffset). The UK statute and parameter file
+// are denser than the US ones: the design positions land on a line of s. 35 and on line 19 of the YAML.
+function placeChips(wr) {
+  const chip = rectOf(lawChip);
+  const frame = { x: 16, y: 16, w: W - 32, h: H - 32 };
+  // statute: text of the wall near the amount, in wall coordinates; the camera moves, so every frame counts
+  const near = textRects(wall)
+    .map((r) => ({ x: r.x - wr.x, y: r.y - wr.y, w: r.w, h: r.h }))
+    .filter((r) => Math.abs(r.y - M.amt.y) < 400 && Math.abs(r.x - M.amt.x) < 700);
+  // the wall is legible until it starts to blur away under the flight (scene1: blur from flyStart)
+  const lawFrames = [];
+  for (let t = T.zoomAmt + 0.1; t <= T.flyStart + 0.15; t += 1 / 60) {
+    if (env(t, T.zoomAmt + 0.1, T.zoomAmt + 0.35, T.flyStart + 0.3, T.flyStart + 0.55) < 0.1) continue;
+    const c = wallCamera(t), pad = 5 * c.s;
+    const ax = c.tx + M.amt.x * c.s, ay = c.ty + M.amt.y * c.s;
+    const box = { x: ax - pad, y: ay - pad * 0.5, w: M.amt.w * c.s + pad * 2, h: M.amt.h * c.s + pad };
+    const obstacles = near.map((r) => ({ x: c.tx + r.x * c.s, y: c.ty + r.y * c.s, w: r.w * c.s, h: r.h * c.s }))
+      .filter((r) => hits(r, frame, 0));
+    obstacles.push(box);
+    const cx = ax + (M.amt.w * c.s) / 2;
+    // drawn centred on (left, top + h/2), scaled about its centre
+    lawFrames.push({ inside: frame, obstacles, at: (dx, dy, k) => ({
+      x: cx + dx - (k * chip.w) / 2, y: ay - 74 + dy + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h }) });
+  }
+  M.lawChipOff = clearOffset(lawFrames, { dxs: steps(-800, 800, 8), dys: steps(-600, 400, 4), margin: 6, scales: [1, 0.9, 0.8, 0.75, 0.7] });
+  // code: the panel is at rest while the chip shows; keep it inside the panel body, off every line's text
+  const bar = rectOf(code.querySelector(".bar"));
+  const codeText = codeLines.flatMap((d) => textRects(d));
+  const body = { x: M.codeRect.x + 12, y: bar.y + bar.h + 6, w: M.codeRect.w - 12 - 28 + 1, h: M.codeRect.y + M.codeRect.h - 6 - (bar.y + bar.h + 6) };
+  const right = M.codeRect.x + M.codeRect.w - 28;
+  // drawn right-aligned at `right`, scaled about its right-centre
+  M.refChipOff = clearOffset([{ inside: body, obstacles: codeText, at: (dx, dy, k) => ({
+    x: right + dx - k * chip.w, y: M.ref.y - 58 + dy + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h }) }],
+    { dxs: steps(-Math.round(M.codeRect.w), 0, 4), dys: steps(-500, 300, 2), margin: 4, scales: [1, 0.9, 0.8] });
+  window.__chips = { law: M.lawChipOff, ref: M.refChipOff };
 }
 
 // camera over the statute wall: focus point (wall coords) drawn at screen (cx, cy)
@@ -568,8 +623,9 @@ function scene1(t) {
     if (t < T.refIn - 0.2) {
       const chipV = env(t, T.zoomAmt + 0.1, T.zoomAmt + 0.35, T.flyStart + 0.3, T.flyStart + 0.55);
       css(lawChip, {
-        left: ax + (M.amt.w * c.s) / 2 + "px", top: ay - 74 + "px",
-        opacity: chipV, transform: `translate(-50%, ${lerp(12, 0, chipV)}px)`,
+        left: ax + (M.amt.w * c.s) / 2 + M.lawChipOff.dx + "px", top: ay - 74 + M.lawChipOff.dy + "px",
+        opacity: chipV, transform: `translate(-50%, ${lerp(12, 0, chipV)}px)` + chipScale(M.lawChipOff),
+        transformOrigin: "50% 50%",
       });
     }
   } else {
@@ -580,8 +636,9 @@ function scene1(t) {
   if (t >= T.refIn - 0.2) {
     const cv2 = env(t, T.refIn, T.refIn + 0.35, T.cap2In - 0.1, T.cap2In + 0.3);
     css(lawChip, {
-      left: M.codeRect.x + M.codeRect.w - 28 + "px", top: M.ref.y - 58 + "px",
-      opacity: cv2, transform: `translate(-100%, ${lerp(10, 0, cv2)}px)`,
+      left: M.codeRect.x + M.codeRect.w - 28 + M.refChipOff.dx + "px", top: M.ref.y - 58 + M.refChipOff.dy + "px",
+      opacity: cv2, transform: `translate(-100%, ${lerp(10, 0, cv2)}px)` + chipScale(M.refChipOff),
+      transformOrigin: "100% 50%",
     });
   }
 
