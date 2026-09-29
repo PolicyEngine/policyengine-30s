@@ -38,8 +38,9 @@
   "net_income_variable": "hbai_household_net_income",
   "engine": "policyengine_uk.Simulation(situation=..., reform=...) with one axis on the parent's employment_income",
   "versions": {
-   "policyengine-uk": "2.102.0",
-   "policyengine-core": "3.32.7",
+   "policyengine": "6.1.1",
+   "policyengine-uk": "2.90.2",
+   "policyengine-core": "3.32.5",
    "numpy": "2.5.3"
   },
   "python": "3.13.9",
@@ -69,8 +70,8 @@
    "points": 321
   },
   "microdata": "none: household situations only; HF cache pointed at an empty temp dir, hub offline, tokens unset, cache still empty after the run",
-  "computed_utc": "2026-09-25T22:03:08+00:00",
-  "seconds": 14.1,
+  "computed_utc": "2026-09-25T22:02:53+00:00",
+  "seconds": 12.5,
   "script": "tools/uk/earnings_sweep.py"
  },
  "earnings": [

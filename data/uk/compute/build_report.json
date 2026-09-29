@@ -35,16 +35,16 @@
   "wall_label": "Income Tax Act 2007, Part 3, Chapters 1–3",
   "sources": {
    "curve": [
-    "policyengine.py 6.1.1 · static"
+    "policyengine.py 6.2.0 · static"
    ],
    "nation": [
-    "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static",
+    "policyengine.py 6.2.0 · enhanced_frs_2024_25 · static",
     "poverty: absolute, before housing costs",
     "Source: Office for National Statistics licensed under the Open Government Licence v.3.0",
     "Contains OS data © Crown copyright and database right 2024"
    ],
    "deciles": [
-    "policyengine.py 6.1.1 · enhanced_frs_2024_25 · static",
+    "policyengine.py 6.2.0 · enhanced_frs_2024_25 · static",
     "Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025.",
     "[data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1",
     "© Crown copyright"
@@ -70,7 +70,7 @@
   "0 <= gain <= tax cut (not on screen)": 80001
  },
  "differential": {
-  "policyengine_uk_2_102_0_max_abs_difference": 0.0,
+  "previous_pin_max_abs_difference": 0.0,
   "policyengine_py_axes_max_abs_difference": {
    "gain": 0.00125,
    "universal_credit_baseline": 0.001406,
@@ -81,19 +81,20 @@
   "policyengine_py_single_households": 24,
   "versions": {
    "sweep": {
+    "policyengine": "6.2.0",
+    "policyengine-uk": "2.102.3",
+    "policyengine-core": "3.32.5",
+    "numpy": "2.5.3"
+   },
+   "previous_pin": {
     "policyengine": "6.1.1",
     "policyengine-uk": "2.90.2",
     "policyengine-core": "3.32.5",
     "numpy": "2.5.3"
    },
-   "latest": {
-    "policyengine-uk": "2.102.0",
-    "policyengine-core": "3.32.7",
-    "numpy": "2.5.3"
-   },
    "crosscheck": {
-    "policyengine": "6.1.1",
-    "policyengine-uk": "2.90.2",
+    "policyengine": "6.2.0",
+    "policyengine-uk": "2.102.3",
     "policyengine-core": "3.32.5",
     "numpy": "2.5.3"
    }

@@ -13,25 +13,27 @@
    "key": "enhanced_frs_2024_25_2026",
    "source": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.56.16",
    "sha256": "e433e532b17bd8ce76030156285816e33d44e93edabd2204adbef71d19a68712",
-   "sha256_matches_policyengine_py_6_1_1_manifest": true,
+   "sha256_matches_installed_policyengine_py_manifest": true,
+   "certified_for_policyengine_uk": "2.102.3",
+   "uprated_by_policyengine_uk": "2.102.3",
    "households": 52846,
    "people": 113617
   },
   "versions": {
-   "policyengine": "6.1.1",
-   "policyengine-uk": "2.90.2",
+   "policyengine": "6.2.0",
+   "policyengine-uk": "2.102.3",
    "policyengine-core": "3.32.5",
    "numpy": "2.5.3",
    "python": "3.13.9"
   },
   "runtime_seconds": {
-   "imports": 7.2,
-   "dataset": 8.8,
-   "economic_impact_analysis": 26.1,
-   "child_poverty": 26.3,
-   "budget": 26.3,
-   "aggregates": 26.3,
-   "sample": 26.4
+   "imports": 2.6,
+   "dataset": 6.7,
+   "economic_impact_analysis": 16.0,
+   "child_poverty": 16.1,
+   "budget": 16.1,
+   "aggregates": 16.2,
+   "sample": 16.2
   },
   "script": "tools/uk/national.py",
   "licence_note": "aggregates only; the underlying FRS microdata stay in data/uk/private/"
@@ -39,8 +41,9 @@
  "budget": {
   "income_tax_revenue_change": -22818476234.295597,
   "national_insurance_revenue_change": 0.0,
-  "universal_credit_change": -599247945.5910938,
-  "household_net_income_total_change": 22127665046.25099,
+  "universal_credit_change": -598887903.0388238,
+  "housing_benefit_change": -10125802.221954737,
+  "household_net_income_total_change": 22127767430.56327,
   "income_tax_baseline_total": 312350249802.0793,
   "income_tax_reform_total": 289531773567.7837,
   "policyengine_py_program_statistics": {
@@ -51,8 +54,8 @@
     "is_tax": true
    },
    "national_insurance": {
-    "baseline_total": 53955449114.356995,
-    "reform_total": 53955449114.356995,
+    "baseline_total": 53960011437.144684,
+    "reform_total": 53960011437.144684,
     "change": 0.0,
     "is_tax": true
    },
@@ -81,9 +84,9 @@
     "is_tax": true
    },
    "universal_credit": {
-    "baseline_total": 79371998177.47772,
-    "reform_total": 78772750231.88663,
-    "change": -599247945.591095,
+    "baseline_total": 79316972438.91124,
+    "reform_total": 78718084535.87244,
+    "change": -598887903.0388031,
     "is_tax": false
    },
    "child_benefit": {
@@ -129,10 +132,10 @@
     "is_tax": false
    }
   },
-  "net_cost_2026_27_gbp": 22139105224.524967,
+  "net_cost_2026_27_gbp": 22139465267.07726,
   "gross_income_tax_cost_2026_27_gbp": 22818476234.295597,
-  "benefit_change_2026_27_gbp": -679371009.7706261,
-  "identity_gap_gbp": -11440178.273975372
+  "benefit_change_2026_27_gbp": -679010967.2183342,
+  "identity_gap_gbp": -11697836.513988495
  },
  "winners": {
   "share_households_gaining_over_1gbp": 0.7591592204242643,
@@ -155,73 +158,73 @@
   "by_decile": [
    {
     "decile": 1,
-    "average_change_household_net_income": 167.86611660080598,
-    "baseline_mean": 16028.91793471578,
-    "reform_mean": 16196.784051316587,
-    "relative_change_percent": 1.0472704226480434
+    "average_change_household_net_income": 167.88738334609843,
+    "baseline_mean": 16034.276984532387,
+    "reform_mean": 16202.164367878486,
+    "relative_change_percent": 1.047053032126441
    },
    {
     "decile": 2,
-    "average_change_household_net_income": 263.26384712749496,
-    "baseline_mean": 29258.562865858294,
-    "reform_mean": 29521.82671298579,
-    "relative_change_percent": 0.8997839310648321
+    "average_change_household_net_income": 263.35023960936815,
+    "baseline_mean": 29271.355439924817,
+    "reform_mean": 29534.705679534185,
+    "relative_change_percent": 0.8996858384295051
    },
    {
     "decile": 3,
-    "average_change_household_net_income": 340.79398716222204,
-    "baseline_mean": 37922.097620193854,
-    "reform_mean": 38262.891607356076,
-    "relative_change_percent": 0.8986686089346129
+    "average_change_household_net_income": 340.520681129623,
+    "baseline_mean": 37924.546941470995,
+    "reform_mean": 38265.06762260062,
+    "relative_change_percent": 0.8978899119220831
    },
    {
     "decile": 4,
-    "average_change_household_net_income": 637.427229598492,
-    "baseline_mean": 46026.860114213225,
-    "reform_mean": 46664.28734381172,
-    "relative_change_percent": 1.384902702501865
+    "average_change_household_net_income": 629.6252907206508,
+    "baseline_mean": 45977.40166821416,
+    "reform_mean": 46607.02695893481,
+    "relative_change_percent": 1.369423386002114
    },
    {
     "decile": 5,
-    "average_change_household_net_income": 765.7782773997387,
-    "baseline_mean": 52977.30378472493,
-    "reform_mean": 53743.08206212467,
-    "relative_change_percent": 1.4454836745023958
+    "average_change_household_net_income": 773.0754817032066,
+    "baseline_mean": 52931.01433660553,
+    "reform_mean": 53704.089818308734,
+    "relative_change_percent": 1.4605340392439266
    },
    {
     "decile": 6,
-    "average_change_household_net_income": 871.1331531322503,
-    "baseline_mean": 60811.931249120855,
-    "reform_mean": 61683.064402253105,
-    "relative_change_percent": 1.432503680180103
+    "average_change_household_net_income": 871.0108983940299,
+    "baseline_mean": 60808.02274052716,
+    "reform_mean": 61679.03363892119,
+    "relative_change_percent": 1.4323947057293824
    },
    {
     "decile": 7,
-    "average_change_household_net_income": 1067.1080970687763,
-    "baseline_mean": 71153.06716259354,
-    "reform_mean": 72220.17525966231,
-    "relative_change_percent": 1.4997359068588043
+    "average_change_household_net_income": 1067.0568525073031,
+    "baseline_mean": 71151.24892332256,
+    "reform_mean": 72218.30577582987,
+    "relative_change_percent": 1.4997022099460775
    },
    {
     "decile": 8,
-    "average_change_household_net_income": 1315.88801736616,
-    "baseline_mean": 84471.92006213483,
-    "reform_mean": 85787.80807950099,
-    "relative_change_percent": 1.5577815875361127
+    "average_change_household_net_income": 1316.0367459653498,
+    "baseline_mean": 84451.84699238809,
+    "reform_mean": 85767.88373835344,
+    "relative_change_percent": 1.5583279618312769
    },
    {
     "decile": 9,
-    "average_change_household_net_income": 1471.7890682078578,
-    "baseline_mean": 103650.2476427438,
-    "reform_mean": 105122.03671095165,
-    "relative_change_percent": 1.4199571170160081
+    "average_change_household_net_income": 1467.6228555216221,
+    "baseline_mean": 103493.12900632483,
+    "reform_mean": 104960.75186184645,
+    "relative_change_percent": 1.4180872388464847
    },
    {
     "decile": 10,
-    "average_change_household_net_income": 1634.737228770915,
-    "baseline_mean": 185271.80155903051,
-    "reform_mean": 186906.53878780143,
-    "relative_change_percent": 0.8823454055149682
+    "average_change_household_net_income": 1637.8439479689696,
+    "baseline_mean": 184560.44772948357,
+    "reform_mean": 186198.29167745254,
+    "relative_change_percent": 0.8874295484857148
    }
   ],
   "definition": "policyengine.py household_net_income deciles (economic_impact_analysis)"
@@ -230,72 +233,72 @@
   "absolute_bhc": {
    "variable": "in_poverty_bhc",
    "all_people": {
-    "rate_baseline": 0.1113578717675023,
-    "rate_reform": 0.10867467510910525,
-    "headcount_baseline": 7791653.77855204,
-    "headcount_reform": 7603911.869963422,
-    "people_lifted_out": 187741.90858861804
+    "rate_baseline": 0.14745663364335812,
+    "rate_reform": 0.14269994289501786,
+    "headcount_baseline": 10317465.828537226,
+    "headcount_reform": 9984642.590678573,
+    "people_lifted_out": 332823.23785865307
    },
    "children_under_18": {
-    "rate_baseline": 0.11781860110618698,
-    "rate_reform": 0.11393404579775586,
-    "headcount_baseline": 1815657.3666464686,
-    "headcount_reform": 1755793.9715995193,
-    "children_lifted_out": 59863.39504694939,
+    "rate_baseline": 0.16315492669717546,
+    "rate_reform": 0.1605595604340709,
+    "headcount_baseline": 2514318.127876967,
+    "headcount_reform": 2474321.931771189,
+    "children_lifted_out": 39996.19610577822,
     "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
    }
   },
   "absolute_ahc": {
    "variable": "in_poverty_ahc",
    "all_people": {
-    "rate_baseline": 0.1446000016863812,
-    "rate_reform": 0.13896917078719553,
-    "headcount_baseline": 10117588.740117446,
-    "headcount_reform": 9723602.35949023,
-    "people_lifted_out": 393986.3806272149
+    "rate_baseline": 0.18997555306800457,
+    "rate_reform": 0.1860621814665192,
+    "headcount_baseline": 13292493.044275358,
+    "headcount_reform": 13018676.419176295,
+    "people_lifted_out": 273816.6250990629
    },
    "children_under_18": {
-    "rate_baseline": 0.1698131298285895,
-    "rate_reform": 0.16547586973547396,
-    "headcount_baseline": 2616925.147911817,
-    "headcount_reform": 2550085.2927005887,
-    "children_lifted_out": 66839.85521122813,
+    "rate_baseline": 0.23730211823100228,
+    "rate_reform": 0.23158015288644632,
+    "headcount_baseline": 3656972.1168103814,
+    "headcount_reform": 3568793.0989643335,
+    "children_lifted_out": 88179.01784604788,
     "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
    }
   },
   "relative_bhc": {
    "variable": "in_relative_poverty_bhc",
    "all_people": {
-    "rate_baseline": 0.17044533603569245,
-    "rate_reform": 0.17259238708955563,
-    "headcount_baseline": 11925973.669215202,
-    "headcount_reform": 12076201.741923928,
-    "people_lifted_out": -150228.07270872593
+    "rate_baseline": 0.1875006584169465,
+    "rate_reform": 0.19141435776381752,
+    "headcount_baseline": 13119325.921436518,
+    "headcount_reform": 13393165.4787139,
+    "people_lifted_out": -273839.5572773814
    },
    "children_under_18": {
-    "rate_baseline": 0.1940056966906698,
-    "rate_reform": 0.20283538873148754,
-    "headcount_baseline": 2989747.536132455,
-    "headcount_reform": 3125818.540614009,
-    "children_lifted_out": -136071.00448155403,
+    "rate_baseline": 0.22036707057578409,
+    "rate_reform": 0.22770059902720372,
+    "headcount_baseline": 3395992.579275444,
+    "headcount_reform": 3509006.779336527,
+    "children_lifted_out": -113014.20006108284,
     "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
    }
   },
   "relative_ahc": {
    "variable": "in_relative_poverty_ahc",
    "all_people": {
-    "rate_baseline": 0.2061210039989517,
-    "rate_reform": 0.21168327966766926,
-    "headcount_baseline": 14422182.05283679,
-    "headcount_reform": 14811371.65877679,
-    "people_lifted_out": -389189.6059399992
+    "rate_baseline": 0.23061618997735087,
+    "rate_reform": 0.23427532262280146,
+    "headcount_baseline": 16136097.785560295,
+    "headcount_reform": 16392125.439920232,
+    "people_lifted_out": -256027.6543599367
    },
    "children_under_18": {
-    "rate_baseline": 0.26146250424787376,
-    "rate_reform": 0.2692731613379091,
-    "headcount_baseline": 4029298.578342706,
-    "headcount_reform": 4149665.625232786,
-    "children_lifted_out": -120367.04689007998,
+    "rate_baseline": 0.3014185800873128,
+    "rate_reform": 0.3096689276997634,
+    "headcount_baseline": 4645046.369939536,
+    "headcount_reform": 4772189.319179267,
+    "children_lifted_out": -127142.94923973083,
     "filter": "age <= 17 (policyengine.py AGE_GROUPS['child'])"
    }
   }

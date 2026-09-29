@@ -2,8 +2,8 @@
  "meta": {
   "what": "policyengine.py pe.uk.calculate_household vs the policyengine_uk axes sweep in data/uk/earnings_sweep.json",
   "versions": {
-   "policyengine": "6.1.1",
-   "policyengine-uk": "2.90.2",
+   "policyengine": "6.2.0",
+   "policyengine-uk": "2.102.3",
    "policyengine-core": "3.32.5",
    "numpy": "2.5.3"
   },
@@ -12,7 +12,7 @@
     "2026": 15000
    }
   },
-  "computed_utc": "2026-09-25T22:11:38+00:00",
+  "computed_utc": "2026-09-29T18:04:31+00:00",
   "tolerance": 0.01,
   "script": "tools/uk/crosscheck.py"
  },

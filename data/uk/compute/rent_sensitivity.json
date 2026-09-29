@@ -3,8 +3,8 @@
   "script": "tools/uk/rent_sensitivity.py",
   "grid": "every £10 from £0 to £80,000",
   "versions": {
-   "policyengine": "6.1.1",
-   "policyengine-uk": "2.90.2",
+   "policyengine": "6.2.0",
+   "policyengine-uk": "2.102.3",
    "policyengine-core": "3.32.5",
    "numpy": "2.5.3"
   },

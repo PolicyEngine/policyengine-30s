@@ -9,7 +9,7 @@ makes this a differential check on the main sweep as well.
 Household runs only: no dataset is loaded (see uk_family.no_microdata).
 
 Run from the repo root:
-  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt \
+  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.2.0.lock.txt \
       python tools/uk/rent_sensitivity.py
 """
 

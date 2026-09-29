@@ -12,11 +12,11 @@ policyengine-uk itself adds and subtracts for it, and the decomposition is asser
 
 Household runs only: no dataset is loaded (see uk_family.no_microdata).
 
-Run from the repo root, once per environment:
-  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt \
+Run from the repo root, once per environment (the second is the previous pin, a differential):
+  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.2.0.lock.txt \
       python tools/uk/earnings_sweep.py --out data/uk/earnings_sweep.json
-  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-uk-2.102.0.lock.txt \
-      python tools/uk/earnings_sweep.py --out data/uk/compute/earnings_sweep_pe-uk-2.102.0.json
+  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt \
+      python tools/uk/earnings_sweep.py --out data/uk/compute/earnings_sweep_pe-6.1.1.json
 """
 
 from __future__ import annotations

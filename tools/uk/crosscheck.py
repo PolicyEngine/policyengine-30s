@@ -11,7 +11,7 @@ data/uk/earnings_sweep.json, and the breakpoints with the sweep's £1 facts.
 
 Household runs only: no dataset is loaded (see uk_family.no_microdata).
 
-  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt \
+  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.2.0.lock.txt \
       python tools/uk/crosscheck.py
 """
 

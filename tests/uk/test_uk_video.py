@@ -10,8 +10,9 @@ Invariants:
   - monotonicity (intended): the family's gain never falls as earnings rise
   - exhaustive: each on-screen sentence about the curve holds at every plotted point, and the
     compute step recorded it holding at every £1 from £0 to £80,000
-  - differential: the plotted points equal data/uk/earnings_sweep.json; policyengine-uk
-    2.102.0 and policyengine.py's household calculator agree with it
+  - differential: the plotted points equal data/uk/earnings_sweep.json; the previous pin
+    (policyengine.py 6.1.1, policyengine-uk 2.90.2) and policyengine.py's household
+    calculator agree with it
   - verbatim: the statute wall contains the s. 35(1) paragraph once, at the stated offset;
     the code panel is the parameter file's lines; the quote is in the source sentence
   - traceability: every £ figure on screen is a computed or sourced number
@@ -109,7 +110,7 @@ def test_note_rate_is_the_model_parameter(v, sw):
 
 
 def test_differential_paths_agree(sw):
-    other = json.loads((UK / "compute" / "earnings_sweep_pe-uk-2.102.0.json").read_text())
+    other = json.loads((UK / "compute" / "earnings_sweep_pe-6.1.1.json").read_text())
     assert other["meta"]["versions"]["policyengine-uk"] != sw["meta"]["versions"]["policyengine-uk"]
     assert max(abs(a - b) for a, b in zip(sw["gain"], other["gain"])) < 0.01
     cc = json.loads((UK / "compute" / "crosscheck.json").read_text())
@@ -254,7 +255,7 @@ PUBLIC_UK_FILES = {
     "audio/uk/events.json",
     "data/uk/README.md", "data/uk/amount.yaml", "data/uk/amount.yaml.commit", "data/uk/code_source.json",
     "data/uk/compute/build_report.json", "data/uk/compute/crosscheck.json",
-    "data/uk/compute/earnings_sweep_pe-uk-2.102.0.json", "data/uk/compute/rent_sensitivity.json",
+    "data/uk/compute/earnings_sweep_pe-6.1.1.json", "data/uk/compute/rent_sensitivity.json",
     "data/uk/earnings_sweep.json", "data/uk/geography.json", "data/uk/geography_check.json",
     "data/uk/national.json", "data/uk/quote.json", "data/uk/statute.json", "data/uk/video.json",
 }

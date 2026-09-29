@@ -1,8 +1,8 @@
 """The UK national run: the personal allowance at £15,000 across the enhanced FRS, 2026-27.
 
-Interface: policyengine.py 6.1.1 with its certified UK dataset (enhanced_frs_2024_25,
-policyengine-uk-data 1.56.16, uprated to 2026 by ensure_datasets), the same flow as the
-US national run:
+Interface: policyengine.py 6.2.0 with its certified UK dataset (enhanced_frs_2024_25,
+policyengine-uk-data 1.56.16, uprated to 2026 by ensure_datasets with the installed
+policyengine-uk, 2.102.3), the same flow as the US national run:
 
     baseline = Simulation(dataset=..., tax_benefit_model_version=uk_latest)
     reform   = Simulation(..., policy=Policy(personal allowance 15,000 from 2026-01-01))
@@ -19,7 +19,7 @@ which is git-ignored and never redistributed.
 
 Run from the repo root (needs a Hugging Face token with access to
 policyengine/policyengine-uk-data-private in HF_TOKEN):
-  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.1.1.lock.txt \\
+  uv run --no-project --python 3.13 --with-requirements tools/uk/requirements.pe-6.2.0.lock.txt \\
       python tools/uk/national.py
 """
 
@@ -66,14 +66,25 @@ NI = "NI"  # sample key for Northern Ireland households, which carry no constitu
 
 # ------------------------------------------------------------ dataset
 manifest = ukds.get_release_manifest("uk")
+MODEL = versions()["policyengine-uk"]
+assert manifest.certification.certified_for_model_version == MODEL, (manifest.certification, MODEL)
+# ensure_datasets reuses any uprated year file it finds, whichever install built it. Uprating runs
+# policyengine.py's create_datasets on policyengine-uk's model, so a file left by other versions would
+# carry their 2026 into this run. A stamp beside it names the builder; on a mismatch it is rebuilt.
+year_file = PRIVATE / f"enhanced_frs_2024_25_year_{YEAR}.h5"
+stamp = year_file.with_suffix(".built_with.json")
+BUILDER = {k: versions()[k] for k in ("policyengine", "policyengine-uk")}
+if year_file.exists() and (not stamp.exists() or json.loads(stamp.read_text()) != BUILDER):
+    year_file.unlink()
 datasets = ensure_datasets(years=[YEAR], data_folder=str(PRIVATE))
 assert len(datasets) == 1, list(datasets)
 dataset_key, dataset = next(iter(datasets.items()))
-cert = manifest.certified_data_artifact if hasattr(manifest, "certified_data_artifact") else None
+assert year_file.exists(), year_file
+stamp.write_text(json.dumps(BUILDER) + "\n")
 source = PRIVATE / "enhanced_frs_2024_25.h5"
 source_sha = hashlib.sha256(source.read_bytes()).hexdigest()
-EXPECTED_SHA = "e433e532b17bd8ce76030156285816e33d44e93edabd2204adbef71d19a68712"  # policyengine.py 6.1.1 release manifest
-assert source_sha == EXPECTED_SHA, source_sha
+EXPECTED_SHA = "e433e532b17bd8ce76030156285816e33d44e93edabd2204adbef71d19a68712"  # policyengine-uk-data 1.56.16
+assert source_sha == EXPECTED_SHA == manifest.certified_data_artifact.sha256, (source_sha, manifest.certified_data_artifact)
 lap("dataset")
 
 # ------------------------------------------------------------ reform
@@ -123,6 +134,8 @@ budget = {
     "income_tax_revenue_change": wsum(p_b, p_r, "income_tax", pw),
     "national_insurance_revenue_change": wsum(p_b, p_r, "national_insurance", pw),
     "universal_credit_change": wsum(bu_b, bu_r, "universal_credit", bw),
+    # outside policyengine.py's UK programme list, so outside net cost; most of the identity gap
+    "housing_benefit_change": wsum(bu_b, bu_r, "housing_benefit", bw),
     "household_net_income_total_change": float(np.sum(d_net * hw)),
     "income_tax_baseline_total": float(np.sum(f64(p_b["income_tax"]) * pw)),
     "income_tax_reform_total": float(np.sum(f64(p_r["income_tax"]) * pw)),
@@ -243,7 +256,9 @@ out = {
                    "note": "policyengine-uk labels fiscal year 2026-27 as 2026 and reads it at 2026-01-01"},
         "behavioral_responses": "none (static; no labour-supply elasticities set)",
         "dataset": {"key": dataset_key, "source": "hf://policyengine/policyengine-uk-data-private/enhanced_frs_2024_25.h5@1.56.16",
-                    "sha256": source_sha, "sha256_matches_policyengine_py_6_1_1_manifest": True,
+                    "sha256": source_sha, "sha256_matches_installed_policyengine_py_manifest": True,
+                    "certified_for_policyengine_uk": manifest.certification.certified_for_model_version,
+                    "uprated_by_policyengine_uk": MODEL,
                     "households": int(len(hh_b)), "people": int(len(p_b))},
         "versions": {**versions(), "python": platform.python_version()},
         "runtime_seconds": laps,

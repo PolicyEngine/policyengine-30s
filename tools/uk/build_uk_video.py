@@ -5,8 +5,8 @@ page reads: country, currency, locale, captions, reform.chip, household.figures,
 household.axis_title, code.repo, statute.wall_label.
 
 Inputs, each written by a script in tools/uk/ (see data/uk/README.md):
-  data/uk/earnings_sweep.json                      family curve (policyengine.py 6.1.1 bundle: policyengine-uk 2.90.2)
-  data/uk/compute/earnings_sweep_pe-uk-2.102.0.json  the same sweep on the latest policyengine-uk (differential)
+  data/uk/earnings_sweep.json                      family curve (policyengine.py 6.2.0 bundle: policyengine-uk 2.102.3)
+  data/uk/compute/earnings_sweep_pe-6.1.1.json     the same sweep on policyengine.py 6.1.1 (policyengine-uk 2.90.2), the previous pin (differential)
   data/uk/compute/crosscheck.json                  the same family through pe.uk.calculate_household (differential)
   data/uk/statute.json, data/uk/quote.json         legislation.gov.uk and Nichols (1857), via fetch_sources.py
   data/uk/amount.yaml (+ .commit, code_source.json) policyengine-uk parameter file, via fetch_sources.py
@@ -43,6 +43,7 @@ sys.path.insert(0, str(HERE))
 import curve_claims  # noqa: E402
 
 X_MAX = 80_000
+PREV_SWEEP = "compute/earnings_sweep_pe-6.1.1.json"  # the previous pin's run of the same family (differential)
 CODE_FIRST, CODE_LAST = 2, 22  # "values:" through the s. 35 legislation.gov.uk href: the whole file but its description
 HOME_CONSTITUENCY = "Manchester Central"  # where the example family's dot sits (an example, not a located household)
 
@@ -194,8 +195,9 @@ def family_curve(sw):
 
 
 def differential(sw):
-    other = load("compute/earnings_sweep_pe-uk-2.102.0.json")
+    other = load(PREV_SWEEP)
     assert other["earnings"] == sw["earnings"]
+    assert other["meta"]["versions"]["policyengine-uk"] != sw["meta"]["versions"]["policyengine-uk"]
     worst = 0.0
     for sec in ("baseline", "reform", "change"):
         for k, v in sw[sec].items():
@@ -209,10 +211,10 @@ def differential(sw):
     assert all(v < 0.01 for v in cc["axes_path"]["max_abs_difference"].values()), cc["axes_path"]
     assert cc["single_household_path"]["points"] >= 5
     return {
-        "policyengine_uk_2_102_0_max_abs_difference": worst,
+        "previous_pin_max_abs_difference": worst,
         "policyengine_py_axes_max_abs_difference": cc["axes_path"]["max_abs_difference"],
         "policyengine_py_single_households": cc["single_household_path"]["points"],
-        "versions": {"sweep": sw["meta"]["versions"], "latest": other["meta"]["versions"], "crosscheck": cc["meta"]["versions"]},
+        "versions": {"sweep": sw["meta"]["versions"], "previous_pin": other["meta"]["versions"], "crosscheck": cc["meta"]["versions"]},
     }
 
 
@@ -255,7 +257,7 @@ def main():
     code, code_src = code_block(from_value)
     # the code panel is the file the model ran: same bytes in both installed packages
     assert m["personal_allowance_yaml_sha256_in_installed_package"] == code_src["sha256"]
-    assert load("compute/earnings_sweep_pe-uk-2.102.0.json")["meta"]["personal_allowance_yaml_sha256_in_installed_package"] == code_src["sha256"]
+    assert load(PREV_SWEEP)["meta"]["personal_allowance_yaml_sha256_in_installed_package"] == code_src["sha256"]
 
     st = load("statute.json")
     amount = pounds(from_value)
@@ -312,7 +314,7 @@ def main():
     }
     v = m["versions"]
     nm = nat["meta"]
-    assert nm["behavioral_responses"].startswith("none") and nm["dataset"]["sha256_matches_policyengine_py_6_1_1_manifest"]
+    assert nm["behavioral_responses"].startswith("none") and nm["dataset"]["sha256_matches_installed_policyengine_py_manifest"]
     national_run = f"policyengine.py {nm['versions']['policyengine']} · {nm['dataset']['key'].rsplit('_', 1)[0]} · static"
     video = {
         "country": "uk",
@@ -370,7 +372,9 @@ def main():
             "gain": max(g for _, g in curve["points"]),
             # an example household, not a located one: its dot sits at the centroid of Manchester Central
             "lonlat": lonlat,
-            "source": ("data/uk/earnings_sweep.json (policyengine_uk axes; identical on policyengine-uk 2.102.0; "
+            "source": ("data/uk/earnings_sweep.json (policyengine_uk axes; identical on policyengine.py "
+                       f"{diff['versions']['previous_pin']['policyengine']} with policyengine-uk "
+                       f"{diff['versions']['previous_pin']['policyengine-uk']}; "
                        "cross-checked with policyengine.py pe.uk.calculate_household)"),
         },
         "nation": nation,
