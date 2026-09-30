@@ -27,13 +27,13 @@
    "python": "3.13.9"
   },
   "runtime_seconds": {
-   "imports": 6.4,
-   "dataset": 8.7,
-   "economic_impact_analysis": 14.8,
-   "child_poverty": 14.9,
-   "budget": 14.9,
-   "aggregates": 14.9,
-   "sample": 15.0
+   "imports": 3.0,
+   "dataset": 3.9,
+   "economic_impact_analysis": 11.2,
+   "child_poverty": 11.3,
+   "budget": 11.3,
+   "aggregates": 11.4,
+   "sample": 11.4
   },
   "script": "tools/uk/national.py",
   "licence_note": "aggregates only; the underlying FRS microdata stay in data/uk/private/"
@@ -144,13 +144,26 @@
   "losers": {
    "records": 12,
    "weighted_households": 19514.47716665268,
+   "contributing_records": {
+    "income_tax": 12,
+    "universal_credit": 1,
+    "pension_credit": 11,
+    "housing_benefit": 7
+   },
    "change_among_losers_gbp": {
     "income_tax": -5531.743782043457,
-    "universal_credit": -499.44500732421875,
-    "pension_credit": -1627.4709701538086,
-    "housing_benefit": -18205.5224609375
+    "pension_credit": -1627.4709701538086
    },
-   "note": "unweighted sums over the losing records; their means-tested benefits fall by more than their tax cut"
+   "records_whose_benefits_fall_by_more_than_their_taxes": 12,
+   "records_by_benefit_that_falls": {
+    "Council Tax Benefit": 3,
+    "Housing Benefit": 7,
+    "Pension Credit": 11,
+    "Universal Credit": 1,
+    "Winter Fuel Allowance": 4,
+    "Scottish Child Payment": 1
+   },
+   "note": "unweighted sums over the losing records, each published only when at least 10 of them contribute (tools/uk/disclosure.py)"
   }
  },
  "deciles": {

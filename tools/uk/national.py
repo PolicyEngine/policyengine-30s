@@ -43,6 +43,7 @@ UK = ROOT / "data" / "uk"
 PRIVATE = UK / "private"
 sys.path.insert(0, str(HERE))
 
+from disclosure import MIN_CONTRIBUTORS, publishable_sums  # noqa: E402
 from uk_family import PA_NEW, PA_PATH, YEAR, FISCAL_YEAR, versions  # noqa: E402
 
 t0 = time.time()
@@ -104,8 +105,13 @@ reform_policy = Policy(
         )
     ],
 )
+# every benefit household_benefits adds up (policyengine-uk's own list), to see which fall for the losers
+from policyengine_uk.system import system as _uk_system  # noqa: E402
+
+BENEFITS = list(type(_uk_system.variables["household_benefits"]).formula.__globals__["HOUSEHOLD_BENEFIT_VARIABLES"])
+BENEFIT_LABEL = {v: _uk_system.variables[v].label for v in BENEFITS}
 EXTRA = {
-    "household": ["region", "hbai_household_net_income"],
+    "household": ["region", "hbai_household_net_income", "household_tax", "household_benefits", *BENEFITS],
     "person": ["personal_allowance", "adjusted_net_income", "income_tax", "national_insurance"],
     "benunit": ["universal_credit", "pension_credit", "housing_benefit"],
 }
@@ -192,16 +198,33 @@ winners["losers"] = {
     "records": int(lose.sum()),
     "weighted_households": float(hw[lose].sum()),
 }
-# sums over a handful of records come close to one record's values; below 10 records publish the count only
-MIN_RECORDS_FOR_SUMS = 10
-if lose.sum() >= MIN_RECORDS_FOR_SUMS:
-    winners["losers"]["change_among_losers_gbp"] = {
-        "income_tax": float((f64(p_r["income_tax"]) - f64(p_b["income_tax"]))[p_b["household_id"].isin(lose_ids).to_numpy()].sum()),
-        **{v: float((f64(bu_r[v]) - f64(bu_b[v]))[bu_lose.to_numpy()].sum()) for v in ("universal_credit", "pension_credit", "housing_benefit")},
-    }
-    winners["losers"]["note"] = "unweighted sums over the losing records; their means-tested benefits fall by more than their tax cut"
-else:
-    winners["losers"]["note"] = f"fewer than {MIN_RECORDS_FOR_SUMS} records, so only the count and weight are published"
+# which programmes moved for the losing households, per household (unweighted): a person-level
+# change adds up within its household, a benefit unit's within the household it lives in
+lose_hh = hh_b.loc[lose, "household_id"].to_numpy()
+bu_hh = p_b[["benunit_id", "household_id"]].drop_duplicates("benunit_id").set_index("benunit_id")["household_id"]
+per_hh = {"income_tax": pd.Series(f64(p_r["income_tax"]) - f64(p_b["income_tax"])).groupby(p_b["household_id"].to_numpy()).sum()}
+for v in ("universal_credit", "pension_credit", "housing_benefit"):
+    per_hh[v] = pd.Series(f64(bu_r[v]) - f64(bu_b[v])).groupby(bu_hh.reindex(bu_b["benunit_id"]).to_numpy()).sum()
+per_hh = {k: s.reindex(lose_hh).fillna(0.0) for k, s in per_hh.items()}
+sums = {k: float(s.sum()) for k, s in per_hh.items()}
+# differential: the same sums taken directly over the losing households' people and benefit units
+direct = {"income_tax": float((f64(p_r["income_tax"]) - f64(p_b["income_tax"]))[p_b["household_id"].isin(lose_ids).to_numpy()].sum()),
+          **{v: float((f64(bu_r[v]) - f64(bu_b[v]))[bu_lose.to_numpy()].sum()) for v in ("universal_credit", "pension_credit", "housing_benefit")}}
+assert all(abs(sums[k] - direct[k]) < 1e-6 for k in sums), (sums, direct)
+contributors = {k: int((s.abs() > 0.005).sum()) for k, s in per_hh.items()}
+winners["losers"]["contributing_records"] = contributors
+winners["losers"]["change_among_losers_gbp"] = publishable_sums(sums, contributors)
+# why each loses: its benefits fall by more than its taxes do (counts of households, checked one by one)
+d_ben = f64(hh_r["household_benefits"]) - f64(hh_b["household_benefits"])
+d_tax = f64(hh_r["household_tax"]) - f64(hh_b["household_tax"])
+winners["losers"]["records_whose_benefits_fall_by_more_than_their_taxes"] = int((d_ben[lose] < d_tax[lose]).sum())
+assert winners["losers"]["records_whose_benefits_fall_by_more_than_their_taxes"] == winners["losers"]["records"], winners["losers"]
+winners["losers"]["records_by_benefit_that_falls"] = {
+    BENEFIT_LABEL[v]: n for v in BENEFITS
+    if (n := int(((f64(hh_r[v]) - f64(hh_b[v]))[lose] < -0.005).sum()))
+}
+winners["losers"]["note"] = (f"unweighted sums over the losing records, each published only when at least "
+                             f"{MIN_CONTRIBUTORS} of them contribute (tools/uk/disclosure.py)")
 assert winners["share_households_losing_over_1gbp"] < 0.005, winners
 
 # ------------------------------------------------------------ deciles

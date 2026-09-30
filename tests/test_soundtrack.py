@@ -408,10 +408,10 @@ def test_momentary_refuses_windows_that_do_not_fit():
             sd.momentary(x, i0, i1, w)
 
 
-def test_uk_sweeps_sit_under_the_music_around_it():
+def test_uk_sweeps_sit_under_the_music_around_it(uk_score):
     """The UK score shares the synthesis; measured on its returned audio, its sweeps get the
     same margin before the master and the same bound after it as the US score."""
-    events, _, report, stems = _build("audio/uk/events.json")
+    events, _, report, stems = uk_score
     kinds = [e["type"] for e in events if e["type"] in SWEEPS]
     assert len(report) == len(kinds) > 0
     for r, kind in zip(report, kinds):

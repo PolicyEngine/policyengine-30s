@@ -304,7 +304,7 @@ EXTREME_WORDS = {"min", "max", "minimum", "maximum", "largest", "smallest", "low
 
 def _key_words(k):
     """snake_case, kebab-case, spaces and camelCase all split into lower-case words."""
-    return {w.lower() for w in re.split(r"[_\-\s]+|(?<=[a-z0-9])(?=[A-Z])", k) if w}
+    return {w.lower() for w in re.split(r"[_\-\s]+|(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|(?<=[A-Za-z])(?=[0-9])", k) if w}
 
 
 def _extremes(x, path=""):
@@ -326,15 +326,36 @@ def test_the_national_run_publishes_no_single_record_extremes(nat):
     largest or smallest value of any survey record."""
     assert _extremes(nat) == []
     assert _extremes({"a": {"largest_loss_gbp": 1}, "b": [{"lowest_income": 2}], "rate_max": 3,
-                      "maxLoss": 4, "worst-case": 5, "peak_gain": 6, "maximise_share": 7}) == [
-        ".a.largest_loss_gbp", ".b[0].lowest_income", ".rate_max", ".maxLoss", ".worst-case", ".peak_gain"]
+                      "maxLoss": 4, "worst-case": 5, "peak_gain": 6, "maximise_share": 7,
+                      "UCPeak": 8, "loss_max2": 9, "sha256": 10}) == [
+        ".a.largest_loss_gbp", ".b[0].lowest_income", ".rate_max", ".maxLoss", ".worst-case", ".peak_gain",
+        ".UCPeak", ".loss_max2"]
 
 
-def test_small_groups_publish_counts_not_sums(nat):
-    """The losers' programme changes are sums over the losing records; with fewer than 10 records a
-    sum is close to one record's value, so the run then publishes the count and weight only."""
+def test_small_groups_publish_only_well_backed_sums(nat):
+    """Each published sum over the losing households has at least MIN_CONTRIBUTORS households with a
+    nonzero change behind it; a sum over fewer is close to one record's value and is left out."""
+    from disclosure import MIN_CONTRIBUTORS
+
     losers = nat["winners"]["losers"]
-    assert losers["records"] >= 10 or "change_among_losers_gbp" not in losers
+    backers = losers["contributing_records"]
+    assert set(losers["change_among_losers_gbp"]) <= set(backers)
+    assert all(backers[k] >= MIN_CONTRIBUTORS for k in losers["change_among_losers_gbp"])
+    assert all(n <= losers["records"] for n in backers.values())
+
+
+@settings(max_examples=200, deadline=None)
+@given(st.dictionaries(st.sampled_from(["a", "b", "c", "d"]), st.floats(-1e6, 1e6, allow_nan=False)),
+       st.dictionaries(st.sampled_from(["a", "b", "c", "d", "e"]), st.integers(0, 30)),
+       st.integers(1, 20))
+def test_publishable_sums_keeps_exactly_the_well_backed(sums, contributors, floor):
+    """Below the floor a sum is dropped (the branch today's 12 losers never reach), at or above it the
+    sum passes through unchanged, and nothing is invented."""
+    from disclosure import publishable_sums
+
+    out = publishable_sums(sums, contributors, floor)
+    assert set(out) <= set(sums) and all(out[k] == sums[k] for k in out)
+    assert all((k in out) == (contributors.get(k, 0) >= floor) for k in sums)
 
 
 def test_the_privacy_scan_catches_a_smuggled_sample(v):
