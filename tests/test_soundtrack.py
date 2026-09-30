@@ -49,18 +49,33 @@ def test_place_writes_exactly_where_and_when_asked(t, gain):
         assert nz[0] == max(0, start) and nz[-1] == min(sd.N, start + n) - 1
 
 
-@pytest.fixture(scope="module")
-def score():
-    events = json.loads((ROOT / "audio" / "events.json").read_text())
+def _build(path):
+    events = json.loads((ROOT / path).read_text())
     report, stems = [], {}
     return events, sd.build(events, report, stems), report, stems
 
 
-def test_mastering_hits_platform_targets(score):
+@pytest.fixture(scope="module")
+def score():
+    return _build("audio/events.json")
+
+
+@pytest.fixture(scope="module")
+def uk_score():
+    return _build("audio/uk/events.json")
+
+
+@pytest.fixture(params=["us", "uk"])
+def each_score(request):
+    """The US and UK scores: the same synthesis and master, different timelines."""
+    return request.getfixturevalue("score" if request.param == "us" else "uk_score")
+
+
+def test_mastering_hits_platform_targets(each_score):
     import pyloudnorm as pyln
     from scipy.signal import resample_poly
 
-    _, mix, _, _ = score
+    _, mix, _, _ = each_score
     lufs = pyln.Meter(sd.SR).integrated_loudness(mix.T)
     true_peak = 20 * np.log10(np.abs(resample_poly(mix, 4, 1, axis=1)).max())
     # the limiter's ceiling is -2 dBTP as its own 4x meter reads it (1e-3 dB for this estimate's
@@ -91,23 +106,23 @@ def _limiter_cut(mix, stems):
     return np.arange(edge, n - edge) * w / sd.SR, gain.max() - gain
 
 
-def test_the_limiter_only_catches_stray_peaks(score):
+def test_the_limiter_only_catches_stray_peaks(each_score):
     """The -2 dBTP limiter is a safety net. When a kick and clap landing together went 4-6.5 dB
     past it, and the hit and drop 6-7.5 dB, it cut the whole mix with them: 13% of windows by
     more than 1 dB and 4% by more than 3 dB, so the pad and arp pumped on every backbeat.
     Those peaks are now shaped where they are made, and the limiter shaves strays."""
-    _, mix, _, stems = score
+    _, mix, _, stems = each_score
     _, cut = _limiter_cut(mix, stems)
     assert cut.max() <= 3.0 and (cut > 1.0).mean() <= 0.01, (cut.max(), (cut > 1.0).mean())
 
 
-def test_no_felt_mallet_cue_lands_in_a_limiter_dip(score):
+def test_no_felt_mallet_cue_lands_in_a_limiter_dip(each_score):
     """The felt-mallet cues that carry the story (the lock, pings, statistics, plinks and decile
     notes) keep the level they were written at: none starts in a window the limiter cut by more
     than 1 dB. The third statistic used to land on a backbeat and lose 6 dB, where its two
     siblings lost under 2. (The typing clicks are not held to this: one at 7.03 s, on a kick,
     still loses about 1.2 dB, as it did before.)"""
-    events, mix, _, stems = score
+    events, mix, _, stems = each_score
     at, cut = _limiter_cut(mix, stems)
     cues = [e for e in events if e["type"] in ("lock", "ping", "stat", "plink", "decile")]
     assert len(cues) > 20
@@ -204,10 +219,10 @@ def test_impacts_take_their_room_and_give_it_back(cues, release):
     assert np.abs(np.diff(g)).max() <= steepest + 1e-9
 
 
-def test_heavy_cues_land_on_downbeats(score):
+def test_heavy_cues_land_on_downbeats(each_score):
     """At 120 BPM in 4/4 a bar is 2 s, so the hit, the drop and the logo sit on even seconds
     (a hit on beat 4 made the bar sound like 3/4); the riser and swell end where they resolve."""
-    events, _, _, _ = score
+    events, _, _, _ = each_score
     at = {e["type"]: e for e in events}
     for kind in ("hit", "drop", "logo"):
         assert abs(at[kind]["t"] / 2 - round(at[kind]["t"] / 2)) < 1e-9, (kind, at[kind]["t"])
@@ -391,3 +406,16 @@ def test_momentary_refuses_windows_that_do_not_fit():
     for i0, i1, w in ((0, 10, 995), (-1, 3, 10), (5, 5, 10), (0, 3, 0)):
         with pytest.raises(ValueError):
             sd.momentary(x, i0, i1, w)
+
+
+def test_uk_sweeps_sit_under_the_music_around_it(uk_score):
+    """The UK score shares the synthesis; measured on its returned audio, its sweeps get the
+    same margin before the master and the same bound after it as the US score."""
+    events, _, report, stems = uk_score
+    kinds = [e["type"] for e in events if e["type"] in SWEEPS]
+    assert len(report) == len(kinds) > 0
+    for r, kind in zip(report, kinds):
+        i, w = r["window_start"], r["window_len"]
+        pre = _loudness(stems["bed_pre"], i, w) - _loudness(stems["sweeps_pre"], i, w)
+        post = _loudness(stems["bed"], i, w) - _loudness(stems["sweeps"], i, w)
+        assert abs(pre - sd.SWEEP_UNDER) < 0.05 and abs(post - sd.SWEEP_UNDER) <= 0.3, (r["t"], kind, pre, post)

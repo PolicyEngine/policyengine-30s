@@ -1,0 +1,115 @@
+{
+ "written": "data/uk/video.json",
+ "mock_parts": [],
+ "on_screen": {
+  "captions": {
+   "code": "PolicyEngine turns the law into ",
+   "code_hl": "code.",
+   "whatif": [
+    "What if Parliament raised the personal allowance to ",
+    "£15,000?"
+   ],
+   "nation": [
+    "Now all of ",
+    "the UK."
+   ]
+  },
+  "chip": "Personal allowance £12,570 → £15,000",
+  "who": "<b>Take a single parent<br>in Manchester</b><br>two kids, ages 4 and 8<br>housing association rent<br>of £500 a month",
+  "lines": [
+   "+£219 from £15,000 to £48,000.",
+   "+£486 from £48,700 to £50,270."
+  ],
+  "note": "Universal Credit counts pay after tax, so it takes back 55p of each £1 of the tax cut.",
+  "pin": [
+   60000,
+   972.0
+  ],
+  "quote_lines": [
+   "…made more plaine and short, to th’intent",
+   "that men might the better understaund them…"
+  ],
+  "quote_attr": "Edward VI · 1551",
+  "statute_cite": "Income Tax Act 2007, s. 35",
+  "statute_amount": "£12,570",
+  "wall_label": "Income Tax Act 2007, Part 3, Chapters 1–3",
+  "sources": {
+   "curve": [
+    "policyengine.py 6.2.0 · static"
+   ],
+   "nation": [
+    "policyengine.py 6.2.0 · enhanced_frs_2024_25 · static",
+    "poverty: absolute, before housing costs",
+    "Source: Office for National Statistics licensed under the Open Government Licence v.3.0",
+    "Contains OS data © Crown copyright and database right 2024"
+   ],
+   "deciles": [
+    "policyengine.py 6.2.0 · enhanced_frs_2024_25 · static",
+    "Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025.",
+    "[data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1",
+    "© Crown copyright"
+   ]
+  },
+  "nation_stats": [
+   "net cost in 2026-27",
+   "of households gain",
+   "fewer children in poverty"
+  ],
+  "dotNote": "Each dot: a household drawn by weight, placed at random in its assigned constituency (in Northern Ireland, anywhere in Northern Ireland)"
+ },
+ "points_checked_on_the_plotted_grid": {
+  "+£219 from £15,000 to £48,000.": 133,
+  "+£486 from £48,700 to £50,270.": 7,
+  "Universal Credit counts pay after tax, so it takes back 55p of each £1 of the tax cut.": 142,
+  "0 <= gain <= tax cut (not on screen)": 321
+ },
+ "points_checked_at_every_pound": {
+  "+£219 from £15,000 to £48,000.": 33001,
+  "+£486 from £48,700 to £50,270.": 1571,
+  "Universal Credit counts pay after tax, so it takes back 55p of each £1 of the tax cut.": 35431,
+  "0 <= gain <= tax cut (not on screen)": 80001
+ },
+ "differential": {
+  "previous_pin_max_abs_difference": 0.0,
+  "policyengine_py_axes_max_abs_difference": {
+   "gain": 0.00125,
+   "universal_credit_baseline": 0.001406,
+   "universal_credit_reform": 0.001445,
+   "income_tax_baseline": 0.005,
+   "income_tax_reform": 0.005
+  },
+  "policyengine_py_single_households": 24,
+  "versions": {
+   "sweep": {
+    "policyengine": "6.2.0",
+    "policyengine-uk": "2.102.3",
+    "policyengine-core": "3.32.5",
+    "numpy": "2.5.3"
+   },
+   "previous_pin": {
+    "policyengine": "6.1.1",
+    "policyengine-uk": "2.90.2",
+    "policyengine-core": "3.32.5",
+    "numpy": "2.5.3"
+   },
+   "crosscheck": {
+    "policyengine": "6.2.0",
+    "policyengine-uk": "2.102.3",
+    "policyengine-core": "3.32.5",
+    "numpy": "2.5.3"
+   }
+  }
+ },
+ "code_panel": {
+  "first": 2,
+  "valueLine": 7,
+  "refLine": 21,
+  "dedent": 0,
+  "label": "Personal allowance",
+  "commit": "412b25aa0a13be8809c61b19fba63f46e4518f65"
+ },
+ "lonlat": [
+  -2.19,
+  53.492
+ ]
+}

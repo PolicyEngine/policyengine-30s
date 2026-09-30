@@ -1,0 +1,48 @@
+{
+ "text": "…made more plaine and short, to th’intent that men might the better understaund them…",
+ "attr": "Edward VI · 1551",
+ "fragment": "made more plaine and short, to th’intent that men might the better understaund them",
+ "fragment_words": 14,
+ "sentence": "Nevertheles I wold wishe that beside them, hereafter, whan time shal serve, the superflous and tediouse statutes were brought into one summe together, and made more plaine and short, to th’intent that men might the better understaund them, wich thing shal moch help to avaunce the profit of the commonweale.",
+ "source": "J. G. Nichols (ed.), Literary Remains of King Edward the Sixth, vol. 2 (London: Roxburghe Club, 1857), p. 486, 'Discourse on the Reformation of Abuses, 1551', section 2, 'Devising of good lawes'",
+ "source_url": "https://archive.org/details/literaryremainso0002john/page/486/mode/1up",
+ "date_basis": "the page's running head reads \"[A.D. 1551.\" (page image data/uk/raw/sources/edward_vi_p486.jpg, read this session)",
+ "spelling": "original 1551 spelling as printed by Nichols; the apostrophe in th’intent is the page's typographic apostrophe",
+ "checks": {
+  "found_in_ocr": {
+   "ia_ocr": true,
+   "cu_ocr": true
+  },
+  "page_image_read": "wording, spelling and punctuation of the fragment match the printed page (checked by eye, 2026-09-25)"
+ },
+ "copyright": "public domain (1551 text, 1857 edition)",
+ "sources": {
+  "ia_ocr": {
+   "url": "https://archive.org/download/literaryremainso0002john/literaryremainso0002john_djvu.txt",
+   "final_url": "https://dn721606.ca.archive.org/0/items/literaryremainso0002john/literaryremainso0002john_djvu.txt",
+   "http_status": 200,
+   "bytes": 1152094,
+   "sha256": "faae4cfa20fb3c7a0ef83da0a23f325b432d97c555c777bb2e8a2a2be16be9f3",
+   "local_path": "data/uk/raw/sources/literaryremainso0002john_djvu.txt",
+   "fetched_utc": "2026-09-25T22:12:36+00:00"
+  },
+  "cu_ocr": {
+   "url": "https://archive.org/download/cu31924091758312/cu31924091758312_djvu.txt",
+   "final_url": "https://ia601909.us.archive.org/8/items/cu31924091758312/cu31924091758312_djvu.txt",
+   "http_status": 200,
+   "bytes": 1002619,
+   "sha256": "54b66cd0dbd403e3f346f250c961cf9cc376c5d30ce6bcec3d3cd93aa880bfaa",
+   "local_path": "data/uk/raw/sources/cu31924091758312_djvu.txt",
+   "fetched_utc": "2026-09-25T22:12:38+00:00"
+  },
+  "ia_page": {
+   "url": "https://archive.org/download/literaryremainso0002john/page/n291.jpg",
+   "final_url": "https://ia600906.us.archive.org/BookReader/BookReaderImages.php?id=literaryremainso0002john&itemPath=%2F16%2Fitems%2Fliteraryremainso0002john&server=ia600906.us.archive.org&page=n291.jpg",
+   "http_status": 200,
+   "bytes": 620477,
+   "sha256": "fd8e29e0178508d970ac8ac78769353cb1e03aa2a1f65a4f12a7cd647b153038",
+   "local_path": "data/uk/raw/sources/edward_vi_p486.jpg",
+   "fetched_utc": "2026-09-25T22:12:39+00:00"
+  }
+ }
+}

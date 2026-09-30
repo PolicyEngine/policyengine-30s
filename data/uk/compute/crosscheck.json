@@ -1,0 +1,276 @@
+{
+ "meta": {
+  "what": "policyengine.py pe.uk.calculate_household vs the policyengine_uk axes sweep in data/uk/earnings_sweep.json",
+  "versions": {
+   "policyengine": "6.2.0",
+   "policyengine-uk": "2.102.3",
+   "policyengine-core": "3.32.5",
+   "numpy": "2.5.3"
+  },
+  "reform_dict_passed": {
+   "gov.hmrc.income_tax.allowances.personal_allowance.amount": {
+    "2026": 15000
+   }
+  },
+  "computed_utc": "2026-09-29T18:04:31+00:00",
+  "tolerance": 0.01,
+  "script": "tools/uk/crosscheck.py"
+ },
+ "axes_path": {
+  "points": 321,
+  "max_abs_difference": {
+   "gain": 0.00125,
+   "universal_credit_baseline": 0.001406,
+   "universal_credit_reform": 0.001445,
+   "income_tax_baseline": 0.005,
+   "income_tax_reform": 0.005
+  }
+ },
+ "single_household_path": {
+  "points": 24,
+  "breakpoints": [
+   0,
+   12570,
+   12571,
+   15000,
+   30000,
+   48000,
+   48001,
+   48002,
+   48676,
+   48677,
+   48700,
+   50270,
+   50271,
+   52699,
+   52700,
+   80000
+  ],
+  "seeded_random_grid_points": [
+   15500.0,
+   17000.0,
+   30750.0,
+   42750.0,
+   56250.0,
+   66250.0,
+   73250.0,
+   79500.0
+  ],
+  "rows": [
+   {
+    "earnings": 0,
+    "gain": 0.0,
+    "uc_baseline": 18393.36,
+    "uc_reform": 18393.36,
+    "income_tax_cut": 0.0,
+    "ni_change": 0.0,
+    "sweep_gain": 0.0
+   },
+   {
+    "earnings": 12570,
+    "gain": 0.0,
+    "uc_baseline": 14298.06,
+    "uc_reform": 14298.06,
+    "income_tax_cut": 0.0,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 12571,
+    "gain": 0.0898,
+    "uc_baseline": 14297.67,
+    "uc_reform": 14297.55,
+    "income_tax_cut": 0.2,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 15000,
+    "gain": 218.6992,
+    "uc_baseline": 13335.78,
+    "uc_reform": 13068.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 30000,
+    "gain": 218.6992,
+    "uc_baseline": 7395.78,
+    "uc_reform": 7128.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 48000,
+    "gain": 218.6992,
+    "uc_baseline": 267.78,
+    "uc_reform": 0.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 48001,
+    "gain": 218.6992,
+    "uc_baseline": 267.38,
+    "uc_reform": 0.08,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 48002,
+    "gain": 219.0117,
+    "uc_baseline": 266.99,
+    "uc_reform": 0.0,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 48676,
+    "gain": 485.9141,
+    "uc_baseline": 0.08,
+    "uc_reform": 0.0,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 48677,
+    "gain": 486.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 48700,
+    "gain": 486.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "inside_claim": "+£486 from £48,700 to £50,270."
+   },
+   {
+    "earnings": 50270,
+    "gain": 486.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "inside_claim": "+£486 from £48,700 to £50,270."
+   },
+   {
+    "earnings": 50271,
+    "gain": 486.1992,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 486.2,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 52699,
+    "gain": 971.8008,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 971.8,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 52700,
+    "gain": 972.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 972.0,
+    "ni_change": 0.0
+   },
+   {
+    "earnings": 80000,
+    "gain": 972.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 972.0,
+    "ni_change": 0.0,
+    "sweep_gain": 972.0
+   },
+   {
+    "earnings": 15500.0,
+    "gain": 218.6992,
+    "uc_baseline": 13137.78,
+    "uc_reform": 12870.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 17000.0,
+    "gain": 218.6992,
+    "uc_baseline": 12543.78,
+    "uc_reform": 12276.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 30750.0,
+    "gain": 218.6992,
+    "uc_baseline": 7098.78,
+    "uc_reform": 6831.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 42750.0,
+    "gain": 218.6992,
+    "uc_baseline": 2346.78,
+    "uc_reform": 2079.48,
+    "income_tax_cut": 486.0,
+    "ni_change": 0.0,
+    "sweep_gain": 218.7,
+    "inside_claim": "+£219 from £15,000 to £48,000."
+   },
+   {
+    "earnings": 56250.0,
+    "gain": 972.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 972.0,
+    "ni_change": 0.0,
+    "sweep_gain": 972.0
+   },
+   {
+    "earnings": 66250.0,
+    "gain": 972.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 972.0,
+    "ni_change": 0.0,
+    "sweep_gain": 972.0
+   },
+   {
+    "earnings": 73250.0,
+    "gain": 972.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 972.0,
+    "ni_change": 0.0,
+    "sweep_gain": 972.0
+   },
+   {
+    "earnings": 79500.0,
+    "gain": 972.0,
+    "uc_baseline": 0.0,
+    "uc_reform": 0.0,
+    "income_tax_cut": 972.0,
+    "ni_change": 0.0,
+    "sweep_gain": 972.0
+   }
+  ]
+ }
+}

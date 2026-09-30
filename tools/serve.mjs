@@ -11,11 +11,12 @@ const TYPES = {
   ".woff2": "font/woff2", ".woff": "font/woff", ".ttf": "font/ttf", ".wav": "audio/wav", ".mp4": "video/mp4",
 };
 
-export function serve(port = 0) {
+// root: another checkout to serve (tools/compare_revisions.mjs serves two side by side)
+export function serve(port = 0, root = ROOT) {
   const server = http.createServer((req, res) => {
     const p = decodeURIComponent(new URL(req.url, "http://x").pathname);
-    const f = path.join(ROOT, p === "/" ? "/site/index.html" : p);
-    if (!f.startsWith(ROOT)) { res.writeHead(403); return res.end(); }
+    const f = path.join(root, p === "/" ? "/site/index.html" : p);
+    if (!f.startsWith(root)) { res.writeHead(403); return res.end(); }
     fs.readFile(f, (err, buf) => {
       if (err) { res.writeHead(404); return res.end("not found"); }
       res.writeHead(200, { "content-type": TYPES[path.extname(f)] || "application/octet-stream", "cache-control": "no-store" });

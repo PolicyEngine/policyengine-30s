@@ -1,0 +1,105 @@
+{
+ "meta": {
+  "script": "tools/uk/rent_sensitivity.py",
+  "grid": "every £10 from £0 to £80,000",
+  "versions": {
+   "policyengine": "6.2.0",
+   "policyengine-uk": "2.102.3",
+   "policyengine-core": "3.32.5",
+   "numpy": "2.5.3"
+  },
+  "reform": {
+   "gov.hmrc.income_tax.allowances.personal_allowance.amount": {
+    "2026": 15000
+   }
+  },
+  "note": "only the rent differs from data/uk/earnings_sweep.json's family"
+ },
+ "cases": {
+  "400": {
+   "rent_per_month": 400,
+   "baseline_uc_last_positive_at": 45640.0,
+   "reform_uc_last_positive_at": 44970.0,
+   "gain_218_70_stretches": [
+    [
+     15000.0,
+     44970.0
+    ]
+   ],
+   "gain_486_stretches": [
+    [
+     45650.0,
+     50270.0
+    ]
+   ],
+   "gain_972_stretches": [
+    [
+     52700.0,
+     80000.0
+    ]
+   ],
+   "gain_at": {
+    "10000": 0.0,
+    "30000": 218.7,
+    "49000": 486.0,
+    "60000": 972.0,
+    "80000": 972.0
+   }
+  },
+  "500": {
+   "rent_per_month": 500,
+   "baseline_uc_last_positive_at": 48670.0,
+   "reform_uc_last_positive_at": 48000.0,
+   "gain_218_70_stretches": [
+    [
+     15000.0,
+     48000.0
+    ]
+   ],
+   "gain_486_stretches": [
+    [
+     48680.0,
+     50270.0
+    ]
+   ],
+   "gain_972_stretches": [
+    [
+     52700.0,
+     80000.0
+    ]
+   ],
+   "gain_at": {
+    "10000": 0.0,
+    "30000": 218.7,
+    "49000": 486.0,
+    "60000": 972.0,
+    "80000": 972.0
+   }
+  },
+  "600": {
+   "rent_per_month": 600,
+   "baseline_uc_last_positive_at": 52050.0,
+   "reform_uc_last_positive_at": 50970.0,
+   "gain_218_70_stretches": [
+    [
+     15000.0,
+     50270.0
+    ]
+   ],
+   "gain_486_stretches": [],
+   "gain_972_stretches": [
+    [
+     52700.0,
+     80000.0
+    ]
+   ],
+   "gain_at": {
+    "10000": 0.0,
+    "30000": 218.7,
+    "49000": 218.7,
+    "60000": 972.0,
+    "80000": 972.0
+   }
+  }
+ }
+}

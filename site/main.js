@@ -4,12 +4,13 @@
 // PolicyEngine runs in data/. If video.json is missing, the page falls back to
 // MOCK_VIDEO and paints a striped MOCK DATA banner on every frame.
 
-import { geoAlbersUsa, geoPath } from "d3-geo";
+import { geoAlbersUsa, geoConicConformal, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import statesTopo from "us-atlas/states-10m.json";
-import { clamp, lerp, E, P, env, mulberry32, fmt, mix, fmtYaml, statText } from "./util.js";
+import { clamp, lerp, E, P, env, mulberry32, fmt, mix, fmtYaml, statText, hits, clearOffset, steps } from "./util.js";
 
 const Q = new URLSearchParams(location.search);
+const COUNTRY = Q.get("country") || "us";
 const W = +(Q.get("w") || 1920);
 const H = +(Q.get("h") || 1080);
 const VERT = H > W;
@@ -79,6 +80,7 @@ const MOCK_VIDEO = {
 
 // ------------------------------------------------------------------- state
 let V = null;           // video data
+let CUR = "$";          // currency symbol from video.json
 let wordCount;
 let stage, wallCam, wall, amtEl, amtBox, quote, quoteWords, quoteAttr, lawChip;
 let code, codeLines, codeVal, codeRefLine, token, tokA, tokB;
@@ -110,8 +112,8 @@ function layout() {
       lines3: { x: 800, y: 680, size: 60 },
       gain: { x: 760, y: 745, size: 124 },
       capTop: { x: 120, y: 96, w: 1200, size: 64 },
-      mapBox: [[660, 290], [1800, 960]],
-      chart: [[330, 330], [1590, 880]],
+      mapBox: COUNTRY === "uk" ? [[1060, 235], [1800, 900]] : [[660, 290], [1800, 960]],
+      chart: COUNTRY === "uk" ? [[330, 330], [1590, 840]] : [[330, 330], [1590, 880]],
       stats: { x: 120, y: 330, gap: 200 },
       legend: { x: 120, y: 184 },
       logo: { cx: W / 2, cy: H / 2 - 70, w: 1000 },
@@ -128,7 +130,7 @@ function layout() {
     lines3: { x: 72, y: 1330, size: 58 },
     gain: { x: 72, y: 1380, size: 116 },
     capTop: { x: 72, y: 290, w: 936, size: 62 },
-    mapBox: [[72, 560], [1008, 1160]],
+    mapBox: COUNTRY === "uk" ? [[190, 500], [890, 1190]] : [[72, 560], [1008, 1160]],
     chart: [[80, 640], [1000, 1380]],
     stats: { x: 72, y: 1230, gap: 210 },
     legend: { x: 72, y: 440 },
@@ -170,6 +172,7 @@ function build() {
   L = layout();
   stage = document.getElementById("stage");
   if (VERT) stage.classList.add("vert");
+  if (COUNTRY !== "us") stage.classList.add("intl");
   document.documentElement.style.setProperty("--W", W + "px");
   document.documentElement.style.setProperty("--H", H + "px");
 
@@ -218,7 +221,7 @@ function build() {
     M.h2Span = h2s;
   }
   for (const col of wall.children) col._words = (col.textContent.match(/\S+/g) || []).length;
-  V.statute.words = [...wall.children].reduce((a, c) => a + c._words, 0);
+  V.statute.words = V.statute.words ?? [...wall.children].reduce((a, c) => a + c._words, 0);
   wordCount = el("div", "note", stage);
   css(wordCount, { left: "50%", top: H / 2 + (VERT ? 230 : 190) + "px", transform: "translateX(-50%)", fontSize: "30px", color: "var(--ink-2)" });
   amtBox = el("div", "", stage); amtBox.id = "amtBox";
@@ -227,7 +230,7 @@ function build() {
 
   quote = el("div", "", stage); quote.id = "quote";
   const q = el("div", "q", quote);
-  const qBreak = V.quote.text.indexOf(" that ");
+  const qBreak = V.quote.text.indexOf(V.quote.break || " that ");
   quoteWords = [];
   V.quote.text.split(/(?<= )/).forEach((w, i, arr) => {
     const s = el("span", "", q); s.textContent = w; quoteWords.push(s);
@@ -238,7 +241,7 @@ function build() {
   // --- scene 2: code
   code = el("div", "", stage); code.id = "code";
   const bar = el("div", "bar", code);
-  bar.innerHTML = `<span>policyengine-us /</span><b>${V.code.file}</b>`;
+  bar.innerHTML = `<span>${V.code.repo || "policyengine-us"} /</span><b>${V.code.file}</b>`;
   const pre = el("pre", "", code);
   codeLines = V.code.lines.map((ln, i) => {
     const d = el("span", "ln", pre);
@@ -259,7 +262,8 @@ function build() {
   cap1 = buildCaption([["PolicyEngine turns the law into "], ["code.", "t"]], "", stage);
   css(cap1, { left: L.cap.x + "px", top: L.cap.y + "px", width: L.cap.w + "px", fontSize: L.cap.size + "px" });
 
-  cap2 = buildCaption([["What if Congress raised the credit to "], ["$" + fmt(V.reform.to) + "?", "t"]], "", stage);
+  const whatif = V.captions?.whatif || ["What if Congress raised the credit to ", CUR + fmt(V.reform.to) + "?"];
+  cap2 = buildCaption([[whatif[0]], [whatif[1], "t"]], "", stage);
   css(cap2, { left: L.cap.x + "px", top: L.cap.y + "px", width: L.cap.w + "px", fontSize: L.cap.size + "px" });
 
   // the reform as passed to pe.us.calculate_household (household.json meta.reform_dict_passed);
@@ -293,20 +297,20 @@ function build() {
   const cv3 = V.household.curve;
   const C = L.chart3, padL = 110, padB = 96, padT = 56, padR = 20;
   const gx = (e) => padL + (e / cv3.xMax) * (C.w - padL - padR);
-  const yMax = 1800;
+  const yMax = cv3.yMax || 1800;
   const gy = (g) => C.h - padB - (g / yMax) * (C.h - padB - padT);
   M.gx = gx; M.gy = gy;
   chart = el("div", "", stage); chart.id = "chart3";
   css(chart, { left: C.x + "px", top: C.y + "px", width: C.w + "px", height: C.h + "px" });
   const xt = [0, 40000, 80000, 120000].filter((e) => e <= cv3.xMax);
-  const yt = [0, 800, 1600];
+  const yt = cv3.yTicks || [0, 800, 1600];
   const d = cv3.points.map(([e, g], i) => `${i ? "L" : "M"}${gx(e).toFixed(1)},${gy(g).toFixed(1)}`).join("");
   chart.innerHTML = `<svg width="${C.w}" height="${C.h}" viewBox="0 0 ${C.w} ${C.h}">
     ${yt.map((g) => `<line class="grid" x1="${padL}" x2="${C.w - padR}" y1="${gy(g)}" y2="${gy(g)}"/>
-      <text class="ty" x="${padL - 16}" y="${gy(g) + 9}" text-anchor="end">${g ? "+$" + fmt(g) : "$0"}</text>`).join("")}
-    ${xt.map((e) => `<text class="tx" x="${gx(e)}" y="${C.h - padB + 40}" text-anchor="middle">${e ? "$" + e / 1000 + "k" : "$0"}</text>`).join("")}
+      <text class="ty" x="${padL - 16}" y="${gy(g) + 9}" text-anchor="end">${g ? "+" + CUR + fmt(g) : CUR + "0"}</text>`).join("")}
+    ${xt.map((e) => `<text class="tx" x="${gx(e)}" y="${C.h - padB + 40}" text-anchor="middle">${e ? CUR + e / 1000 + "k" : CUR + "0"}</text>`).join("")}
     <text class="ax" x="${(padL + C.w - padR) / 2}" y="${C.h - 6}" text-anchor="middle">Earnings</text>
-    <text class="ax" x="${padL}" y="24" text-anchor="start">Change in net income, ${V.reform.year}</text>
+    <text class="ax" x="${padL}" y="24" text-anchor="start">${V.household.axis_title || "Change in net income, " + V.reform.year}</text>
     <path class="curve" d="${d}"/>
     <circle class="ph" r="9"/>
   </svg>`;
@@ -320,7 +324,7 @@ function build() {
   playhead = chart.querySelector(".ph");
   M.curveLen = null;
   pinEl = el("div", "pin", chart);
-  pinEl.innerHTML = `$${fmt(cv3.pin[0])}<b>+$${fmt(cv3.pin[1])}</b>`;
+  pinEl.innerHTML = `${CUR}${fmt(cv3.pin[0])}<b>+${CUR}${fmt(cv3.pin[1])}</b>`;
   css(pinEl, { left: gx(cv3.pin[0]) + "px", top: gy(cv3.pin[1]) + "px" });
   lineEls = cv3.lines.map((txt, i) => {
     const e = el("div", "line3" + (i ? " t" : ""), stage);
@@ -333,7 +337,7 @@ function build() {
   css(noteEl, { left: L.lines3.x + "px", top: L.lines3.y + 2 * L.lines3.size * 1.15 + 18 + "px", width: (VERT ? 936 : 1000) + "px" });
 
   reformChip = el("div", "chip", stage);
-  reformChip.innerHTML = `Child Tax Credit $${fmt(V.reform.from)} → $${fmt(V.reform.to)} in ${V.reform.year}`;
+  reformChip.innerHTML = V.reform.chip || `Child Tax Credit $${fmt(V.reform.from)} → $${fmt(V.reform.to)} in ${V.reform.year}`;
 
   // --- scene 4-5: everyone
   capNation = buildCaption(V.nation.caption.map((c, i) => [c, i % 2 ? "t" : ""]), "", stage);
@@ -399,8 +403,18 @@ function highlightYaml(line) {
   return `${ind}${esc(dash)}<span class="${keyCls}">${esc(key)}</span>${colon}${restHtml}`;
 }
 
+// figure x positions: the US family (two adults, two kids) keeps its hand-set layout
+function figureLayout() {
+  const f = V.household.figures || { adults: 2, kid_ages: [4, 8] };
+  if (f.adults === 2 && f.kid_ages.length === 2) return [[80, 240, 30, 84], [210, 232, 29, 80], [340, 150, 22, 58], [460, 178, 25, 66]];
+  const specs = [...Array(f.adults)].map((_, i) => [240 - 8 * i, 30 - i, 84 - 4 * i])
+    .concat(f.kid_ages.map((a) => { const h = 130 + 5 * a; return [h, 20 + a * 0.6, 50 + 2 * a]; }));
+  const step = 480 / Math.max(1, specs.length - 1);
+  return specs.map(([h, head, w], i) => [40 + i * step, h, head, w]);
+}
+
 function familySvg() {
-  // Two adults, two children (ages 4 and 8), drawn as simple figures.
+  // the example household's members, drawn as simple figures
   const fig = (x, h, head, w) => {
     const top = 260 - h;
     return `<g transform="translate(${x},0)">
@@ -410,7 +424,7 @@ function familySvg() {
   };
   return `<svg width="560" height="280" viewBox="0 0 560 280">
     <g fill="rgba(56,178,172,0.10)" stroke="#81E6D9" stroke-width="4">
-      ${fig(80, 240, 30, 84)}${fig(210, 232, 29, 80)}${fig(340, 150, 22, 58)}${fig(460, 178, 25, 66)}
+      ${figureLayout().map(([x, h, head, w]) => fig(x, h, head, w)).join("")}
     </g>
     <line x1="10" y1="268" x2="550" y2="268" stroke="#334155" stroke-width="2"/>
   </svg>`;
@@ -424,6 +438,61 @@ function rectOf(e) {
   return { x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k };
 }
 
+// the line boxes of every run of visible text under root, in stage coordinates
+function textRects(root) {
+  const s = stage.getBoundingClientRect(), k = s.width / W;
+  const out = [], range = document.createRange();
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    if (!n.nodeValue.trim()) continue;
+    range.selectNodeContents(n);
+    for (const r of range.getClientRects()) {
+      if (r.width >= 1) out.push({ x: (r.left - s.left) / k, y: (r.top - s.top) / k, w: r.width / k, h: r.height / k });
+    }
+  }
+  return out;
+}
+
+const chipScale = (o) => (o.k === 1 ? "" : ` scale(${o.k})`);
+
+// Shrink an element's font in 0.5 px steps until fits(el) holds. Deterministic: it depends
+// only on layout, never on time, and leaves anything that already fits exactly as it was.
+function fitFont(el, fits, min = 12) {
+  let size = parseFloat(getComputedStyle(el).fontSize);
+  while (!fits(el) && size > min) { size -= 0.5; el.style.fontSize = size + "px"; }
+  return size;
+}
+
+function autoFit() {
+  // code panel: the longest verbatim line must fit (no wrapping or clipping of file text)
+  const pre = code.querySelector("pre");
+  const codeFont = fitFont(pre, (e) => e.scrollWidth <= e.clientWidth + 0.5);
+  // file path in the title bar: drop leading folders until it fits
+  const bar = code.querySelector(".bar b");
+  const parts = V.code.file.split("/");
+  let k = 0;
+  const over = () => bar.scrollWidth > bar.clientWidth + 0.5 || bar.parentElement.scrollWidth > bar.parentElement.clientWidth + 0.5;
+  while (over() && k < parts.length - 2) {
+    k++; bar.textContent = "…/" + parts.slice(k).join("/");
+  }
+  // reform card: the dict must fit on its lines
+  fitFont(reform.querySelector("pre"), (e) => e.scrollWidth <= e.clientWidth + 0.5);
+  // captions in the narrow left column: at most three lines
+  for (const cap of [cap1, cap2]) {
+    const lh = () => parseFloat(getComputedStyle(cap).fontSize) * 1.04;
+    fitFont(cap, (e) => e.offsetHeight <= 3 * lh() + 2, 40);
+  }
+  // portrait: a long household description pushes the chart and its lines down instead of overlapping
+  if (VERT) {
+    const bottom = famDesc.offsetTop + famDesc.offsetHeight + 40;
+    const shift = Math.max(0, bottom - chart.offsetTop);
+    if (shift > 0) {
+      for (const e of [chart, noteEl, ...lineEls]) e.style.top = e.offsetTop + shift + "px";
+    }
+  }
+  return codeFont;
+}
+
 function measure() {
   // wall-local coordinates of the $2,200 token (wall untransformed)
   wallCam.style.transform = "none";
@@ -435,9 +504,12 @@ function measure() {
   css(code, { opacity: 1, transform: "none" });
   const vr = rectOf(codeVal);
   M.val = vr;
-  M.valFont = 22;
+  // the flying value lands at the code panel's size. The US film keeps its original 22 px target
+  // (portrait CSS sets the panel to 21 px); other countries follow the panel, which may have shrunk to fit
+  M.valFont = COUNTRY === "us" ? 22 : M.codeFont;
   M.codeRect = rectOf(code);
   M.ref = rectOf(codeRefLine);
+  placeChips(wr);
   // when the playhead reaches the pinned earnings level (solved once, so frames stay history-free)
   M.curveLen = curvePath.getTotalLength();
   const pinX = M.gx(V.household.curve.pin[0]);
@@ -447,6 +519,55 @@ function measure() {
     if (curvePath.getPointAtLength(M.curveLen * E.inOutSine(mid)).x < pinX) lo = mid; else hi = mid;
   }
   M.pinT = lerp(T.curveA, T.curveB, hi);
+}
+
+// Where the citation chip goes in its two scenes (see clearOffset). The UK statute and parameter file
+// are denser than the US ones: the design positions land on a line of s. 35 and on line 19 of the YAML.
+function placeChips(wr) {
+  const chip = rectOf(lawChip);
+  const frame = { x: 16, y: 16, w: W - 32, h: H - 32 };
+  // statute: text of the wall near the amount, in wall coordinates; the camera moves, so every frame counts
+  const near = textRects(wall)
+    .map((r) => ({ x: r.x - wr.x, y: r.y - wr.y, w: r.w, h: r.h }))
+    .filter((r) => Math.abs(r.y - M.amt.y) < 400 && Math.abs(r.x - M.amt.x) < 700);
+  // Every frame the chip shows while the wall is legible (scene1: the wall fades from flyStart + 0.1 and
+  // blurs from flyStart; past half opacity or 2 px of blur, overlap no longer reads), with the slide the
+  // chip enters and leaves on. The design position is judged at rest (see clearOffset).
+  const lawV = (t) => env(t, T.zoomAmt + 0.1, T.zoomAmt + 0.35, T.flyStart + 0.3, T.flyStart + 0.55);
+  const legible = (t) => 1 - P(t, T.flyStart + 0.1, T.flyStart + 0.6, E.inOutSine) >= 0.5 && 6 * P(t, T.flyStart, T.flyStart + 1.1) <= 2;
+  const lawFrames = [], lawRest = [];
+  for (let t = T.zoomAmt + 0.1; t <= Math.min(T.flyStart + 0.55, T.refIn - 0.2); t += 1 / 60) {
+    const v = lawV(t);
+    if (v < 0.1 || !legible(t)) continue;
+    const c = wallCamera(t), pad = 5 * c.s;
+    const ax = c.tx + M.amt.x * c.s, ay = c.ty + M.amt.y * c.s;
+    const box = { x: ax - pad, y: ay - pad * 0.5, w: M.amt.w * c.s + pad * 2, h: M.amt.h * c.s + pad };
+    const obstacles = near.map((r) => ({ x: c.tx + r.x * c.s, y: c.ty + r.y * c.s, w: r.w * c.s, h: r.h * c.s }))
+      .filter((r) => hits(r, frame, 0));
+    obstacles.push(box);
+    const cx = ax + (M.amt.w * c.s) / 2;
+    // drawn centred on (left, top + h/2), scaled about its centre, `ty` lower while it slides
+    const at = (ty) => (dx, dy, k) => ({ x: cx + dx - (k * chip.w) / 2, y: ay - 74 + dy + ty + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h });
+    lawFrames.push({ inside: frame, obstacles, at: at(lerp(12, 0, v)) });
+    lawRest.push({ inside: frame, obstacles, at: at(0) });
+  }
+  M.lawChipOff = clearOffset(lawFrames, { dxs: steps(-800, 800, 8), dys: steps(-600, 400, 4), margin: 6, scales: [1, 0.9, 0.8, 0.75, 0.7], designFrames: lawRest });
+  // code: the panel is at rest while the chip shows; keep it inside the panel body, off every line's text
+  const bar = rectOf(code.querySelector(".bar"));
+  const codeText = codeLines.flatMap((d) => textRects(d));
+  const body = { x: M.codeRect.x + 12, y: bar.y + bar.h + 6, w: M.codeRect.w - 12 - 28 + 1, h: M.codeRect.y + M.codeRect.h - 6 - (bar.y + bar.h + 6) };
+  const right = M.codeRect.x + M.codeRect.w - 28;
+  // drawn right-aligned at `right`, scaled about its right-centre; every frame it shows, with its slide
+  const refV = (t) => env(t, T.refIn, T.refIn + 0.35, T.cap2In - 0.1, T.cap2In + 0.3);
+  const refFrames = [];
+  const refAt = (ty) => (dx, dy, k) => ({ x: right + dx - k * chip.w, y: M.ref.y - 58 + dy + ty + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h });
+  for (let t = T.refIn; t <= T.cap2In + 0.3; t += 1 / 60) {
+    const v = refV(t);
+    if (v >= 0.1) refFrames.push({ inside: body, obstacles: codeText, at: refAt(lerp(10, 0, v)) });
+  }
+  M.refChipOff = clearOffset(refFrames, { dxs: steps(-Math.round(M.codeRect.w), 0, 4), dys: steps(-500, 300, 2), margin: 4,
+    scales: [1, 0.9, 0.8], designFrames: [{ inside: body, obstacles: codeText, at: refAt(0) }] });
+  window.__chips = { law: M.lawChipOff, ref: M.refChipOff };
 }
 
 // camera over the statute wall: focus point (wall coords) drawn at screen (cx, cy)
@@ -492,7 +613,7 @@ function scene1(t) {
       const m = `linear-gradient(to bottom, #000 ${p * 100}%, transparent ${p * 100 + 6}%)`;
       col.style.webkitMaskImage = m; col.style.maskImage = m;
     });
-    wordCount.textContent = `${V.statute.cite.replace(/\(h\)\(2\)$/, "").trim()} · ${fmt(V.statute.words)} words`;
+    wordCount.textContent = `${V.statute.wall_label || V.statute.cite.replace(/\(h\)\(2\)$/, "").trim()} · ${fmt(V.statute.words)} words`;
     const wc = P(t, 0, 0.5, E.outCubic);
     css(wordCount, { opacity: wc * (1 - P(t, T.quoteOut - 0.1, T.quoteOut + 0.3, E.inOutSine)), filter: `blur(${lerp(8, 0, wc)}px)` });
     // dim the wall behind the quote
@@ -514,8 +635,9 @@ function scene1(t) {
     if (t < T.refIn - 0.2) {
       const chipV = env(t, T.zoomAmt + 0.1, T.zoomAmt + 0.35, T.flyStart + 0.3, T.flyStart + 0.55);
       css(lawChip, {
-        left: ax + (M.amt.w * c.s) / 2 + "px", top: ay - 74 + "px",
-        opacity: chipV, transform: `translate(-50%, ${lerp(12, 0, chipV)}px)`,
+        left: ax + (M.amt.w * c.s) / 2 + M.lawChipOff.dx + "px", top: ay - 74 + M.lawChipOff.dy + "px",
+        opacity: chipV, transform: `translate(-50%, ${lerp(12, 0, chipV)}px)` + chipScale(M.lawChipOff),
+        transformOrigin: "50% 50%",
       });
     }
   } else {
@@ -526,8 +648,9 @@ function scene1(t) {
   if (t >= T.refIn - 0.2) {
     const cv2 = env(t, T.refIn, T.refIn + 0.35, T.cap2In - 0.1, T.cap2In + 0.3);
     css(lawChip, {
-      left: M.codeRect.x + M.codeRect.w - 28 + "px", top: M.ref.y - 58 + "px",
-      opacity: cv2, transform: `translate(-100%, ${lerp(10, 0, cv2)}px)`,
+      left: M.codeRect.x + M.codeRect.w - 28 + M.refChipOff.dx + "px", top: M.ref.y - 58 + M.refChipOff.dy + "px",
+      opacity: cv2, transform: `translate(-100%, ${lerp(10, 0, cv2)}px)` + chipScale(M.refChipOff),
+      transformOrigin: "100% 50%",
     });
   }
 
@@ -640,7 +763,7 @@ function scene3(t) {
   figs.forEach((g, i) => {
     const p = P(t, T.famIn + 0.3 + i * 0.09, T.famIn + 0.3 + i * 0.09 + 0.5, E.outBack);
     g.setAttribute("opacity", clamp(p));
-    const cx = [80, 210, 340, 460][i];
+    const cx = figureLayout()[i][0];
     g.setAttribute("transform", `translate(${cx},${lerp(40, 0, clamp(p))})`);
   });
   const shrink = P(t, T.famOut, T.zoomA + 0.05, E.inOutCubic);
@@ -685,18 +808,34 @@ function rampColor(u) {
 }
 
 function buildMap() {
-  const states = feature(statesTopo, statesTopo.objects.states);
-  const proj = geoAlbersUsa().fitExtent(L.mapBox, states);
-  const path = geoPath(proj);
+  let proj, path;
+  if (COUNTRY === "us") {
+    const states = feature(statesTopo, statesTopo.objects.states);
+    proj = geoAlbersUsa().fitExtent(L.mapBox, states);
+    path = geoPath(proj);
+    map.paths = new Map();
+    for (const f of states.features) map.paths.set(+f.id, new Path2D(path(f)));
+    map.bounds = new Map(states.features.map((f) => [+f.id, path.bounds(f)]));
+    map.outline = new Path2D(states.features.map((f) => path(f)).join(""));
+  } else {
+    // every area shape in cdGeo (UK: 650 constituencies); a conformal conic fitted to them
+    const fc = { type: "FeatureCollection", features: (V.cdGeo || []).map((d) => ({ type: "Feature", geometry: { type: "MultiPolygon", coordinates: d.polys } })) };
+    proj = geoConicConformal().parallels([50, 58]).rotate([2.5, 0]).fitExtent(L.mapBox, fc);
+    path = geoPath(proj);
+    map.paths = new Map(); map.bounds = new Map();
+    map.outline = new Path2D(fc.features.map((f) => path(f)).join(""));
+  }
+  // regions a dot can fall back to when its record carries no area code (UK: Northern Ireland)
+  for (const [key, codes] of Object.entries(V.sampleRegions || {})) {
+    const feats = (V.cdGeo || []).filter((d) => codes.includes(d.geoid))
+      .map((d) => ({ type: "Feature", geometry: { type: "MultiPolygon", coordinates: d.polys } }));
+    map.paths.set(key, new Path2D(feats.map((f) => path(f)).join("")));
+    map.bounds.set(key, path.bounds({ type: "FeatureCollection", features: feats }));
+  }
   map.proj = proj;
-  map.paths = new Map();
-  for (const f of states.features) map.paths.set(+f.id, new Path2D(path(f)));
-  map.bounds = new Map(states.features.map((f) => [+f.id, path.bounds(f)]));
-  map.outline = new Path2D(states.features.map((f) => path(f)).join(""));
   const home = V.household.lonlat || [-82.9988, 39.9612];
   map.home = proj(home);
-
-  // congressional district shapes (Census cb_2024 cd119, via policyengine-app-v2)
+  // area shapes for placing dots (US: Census cb_2024 cd119 districts via policyengine-app-v2) (Census cb_2024 cd119, via policyengine-app-v2)
   map.cd = new Map();
   for (const d of V.cdGeo || []) {
     const f = { type: "Feature", geometry: { type: "MultiPolygon", coordinates: d.polys } };
@@ -721,7 +860,7 @@ function buildMap() {
     } while (!probe.isPointInPath(p2, x, y) && tries < 400);
     // light-up order follows the reform's $800-per-child structure: one child's
     // worth first, then two, then three or more
-    const step = gain > 0.5 ? Math.min(3, Math.max(1, Math.round(gain / 800))) : 0;
+    const step = gain > 0.5 ? Math.min(3, Math.max(1, Math.round(gain / (V.nation.step || 800)))) : 0;
     // per-dot jitter from its own seed, so timing (and the score) is identical in every layout
     dots.push({ x, y, gain, cd, fips, dec, step, u: clamp(gain / maxGain), j: mulberry32(i * 7919 + 17)() });
   }
@@ -930,7 +1069,7 @@ function scene45(t) {
     d.style.display = p > 0.001 ? "block" : "none";
     if (p <= 0.001) return;
     css(d, { opacity: p, transform: `translateY(${lerp(20, 0, p)}px)` });
-    d._num.innerHTML = statText(V.nation.stats[i]);
+    d._num.innerHTML = statText(V.nation.stats[i], { cur: CUR });
     d._num.style.filter = `blur(${lerp(8, 0, P(t, at, at + 0.45, E.outCubic))}px)`;
   });
   const ld = env(t, T.zoomA + 0.8, T.zoomA + 1.2, T.hexA - 0.1, T.hexA + 0.3);
@@ -945,7 +1084,7 @@ function scene45(t) {
     bars.forEach((b, i) => {
       const grow = P(t, b.inT, b.inT + 0.55, E.outCubic);
       const p = P(t, b.inT + 0.4, b.inT + 0.7, E.outCubic);
-      barLbl[i].textContent = "$" + fmt(b.v);
+      barLbl[i].textContent = CUR + fmt(b.v);
       css(barLbl[i], { top: b.base - Math.max(2, b.h) * grow - 52 + "px", opacity: p * (1 - out), transform: "translateX(-50%)" });
       css(barAx[i], { opacity: P(t, T.hexA + 0.3, T.hexA + 0.7) * (1 - out) });
     });
@@ -1060,9 +1199,34 @@ function mockSample() {
   return Array.from({ length: 12000 }, () => [fips[Math.floor(rnd() * fips.length)], rnd() < 0.3 ? 800 * (1 + Math.floor(rnd() * 3)) : 0, null]);
 }
 
+// Placeholder dots for a clone without the private survey sample: area codes from the map's own shapes,
+// gains and deciles from a fixed seed. Only ever drawn under the MOCK DATA banner.
+function mockAreaSample() {
+  const rnd = mulberry32(99);
+  const codes = (V.cdGeo || []).map((d) => d.geoid);
+  const regions = Object.keys(V.sampleRegions || {});
+  return Array.from({ length: 12000 }, (_, i) => {
+    const gain = rnd() < 0.3 ? (V.nation.step || 800) * (1 + Math.floor(rnd() * 3)) : 0;
+    // every 40th row uses a region fallback (UK: Northern Ireland), so a clone exercises that path too
+    if (regions.length && i % 40 === 0) return [regions[0], gain, null, 1 + Math.floor(rnd() * 10)];
+    const c = codes[Math.floor(rnd() * codes.length)];
+    return [c, gain, c, 1 + Math.floor(rnd() * 10)];
+  });
+}
+
 (async function boot() {
-  const real = await loadJSON("/data/video.json");
+  const real = await loadJSON(COUNTRY === "us" ? "/data/video.json" : `/data/${COUNTRY}/video.json`);
   V = real || MOCK_VIDEO;
+  // record-level dots live outside video.json (UK: survey-derived, git-ignored)
+  if (real && V.sampleFile) {
+    V.sample = await loadJSON(`/data/${COUNTRY}/${V.sampleFile}`);
+    if (!V.sample) {
+      V.sample = mockAreaSample();
+      V.mock = true;
+      V.mock_parts = [...(V.mock_parts || []), "sample"];
+      V.nation.dotNote = "MOCK dots: the survey sample is not in this checkout (data/uk/private/)";
+    }
+  }
   if (!real) {
     V.sample = mockSample();
     V.code = V.code || (await loadJSON("/data/code_mock.json"));
@@ -1070,10 +1234,14 @@ function mockSample() {
     V.nation.dotNote = "MOCK";
     V.signoff = "MOCK";
   }
+  CUR = V.currency || "$";
   build();
   await document.fonts.ready;
   await Promise.all([...document.fonts].map((f) => f.load().catch(() => {})));
   await new Promise((r) => (logoImg.complete ? r() : (logoImg.onload = r)));
+  // reveal everything once so the fit measures real layout, then fit, then measure
+  for (const e of [code, reform, cap1, cap2]) e.style.display = "block";
+  M.codeFont = autoFit();
   measure();
   buildMap();
   buildDeciles();

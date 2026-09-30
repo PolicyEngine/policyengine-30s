@@ -2,7 +2,7 @@
 // function of t built from these, so their properties bound what can appear on screen.
 import { describe, expect, test } from "vitest";
 import fc from "fast-check";
-import { clamp, lerp, E, P, env, mulberry32, fmt, mix, fmtYaml, statText } from "../site/util.js";
+import { clamp, lerp, E, P, env, mulberry32, fmt, mix, fmtYaml, statText, hits, clearOffset, steps } from "../site/util.js";
 
 const MONOTONE = ["lin", "outCubic", "inCubic", "outQuint", "inOutCubic", "inOutQuint", "outExpo", "inExpo", "inOutExpo", "inOutSine"];
 const unit = fc.double({ min: 0, max: 1, noNaN: true });
@@ -104,6 +104,17 @@ describe("number formatting", () => {
       return Number(shown) === expected;
     }));
   });
+
+  test("statText prefixes only money, in the stated currency", () => {
+    const stat = fc.record({ kind: fc.constantFrom("billion", "pct", "count"), value: fc.nat(1e6), digits: fc.constant(0) });
+    fc.assert(fc.property(stat, fc.constantFrom("$", "£"), fc.nat(20), (s, cur, i) => {
+      const lead = s.kind === "billion" ? cur : "";
+      const withCur = statText(s, { cur });
+      return withCur.startsWith(lead + String(s.value).slice(0, 1))
+        && statText(s, i) === statText(s)  // an index from Array.map never becomes the currency
+        && (s.kind !== "billion" || statText(s).startsWith("$"));
+    }));
+  });
 });
 
 describe("colour mixing", () => {
@@ -153,3 +164,102 @@ describe("golden values", () => {
     ]);
   });
 });
+
+// the citation chip's placement (site/main.js placeChips): a small world of boxes, a chip that may
+// shift with a "camera" from frame to frame, a coarse grid of offsets and two scales
+describe("clearOffset: where a chip goes when its design position covers text", () => {
+  const box = fc.record({ x: fc.integer({ min: 0, max: 180 }), y: fc.integer({ min: 0, max: 180 }),
+    w: fc.integer({ min: 1, max: 60 }), h: fc.integer({ min: 1, max: 30 }) });
+  const world = fc.record({
+    chip: fc.record({ x: fc.integer({ min: 40, max: 120 }), y: fc.integer({ min: 40, max: 120 }),
+      w: fc.integer({ min: 10, max: 50 }), h: fc.integer({ min: 6, max: 20 }) }),
+    shifts: fc.array(fc.tuple(fc.integer({ min: -6, max: 6 }), fc.integer({ min: -6, max: 6 })), { minLength: 1, maxLength: 3 }),
+    obstacles: fc.array(box, { maxLength: 8 }),
+    margin: fc.integer({ min: 0, max: 4 }),
+    // the frame the chip must stay in; tight enough that it often decides where the chip can go
+    inside: fc.record({ x: fc.integer({ min: 0, max: 60 }), y: fc.integer({ min: 0, max: 60 }),
+      w: fc.integer({ min: 60, max: 200 }), h: fc.integer({ min: 40, max: 200 }) }),
+  });
+  const GRID = { dxs: steps(-60, 60, 6), dys: steps(-60, 60, 6), scales: [1, 0.8] };
+  const framesOf = ({ chip, shifts, obstacles, inside }) => shifts.map(([sx, sy]) => ({
+    inside,
+    obstacles: obstacles.map((o) => ({ ...o, x: o.x + sx, y: o.y + sy })),
+    at: (dx, dy, k) => ({ x: chip.x + sx + dx + ((1 - k) * chip.w) / 2, y: chip.y + sy + dy + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h }),
+  }));
+  const clear = (frames, dx, dy, k, m) => frames.every((f) => {
+    const r = f.at(dx, dy, k);
+    return r.x >= f.inside.x && r.y >= f.inside.y && r.x + r.w <= f.inside.x + f.inside.w && r.y + r.h <= f.inside.y + f.inside.h
+      && f.obstacles.every((o) => !hits(r, o, m));
+  });
+
+  test("keeps the design position exactly whenever nothing overlaps it there", () => {
+    fc.assert(fc.property(world, (w) => {
+      const frames = framesOf(w);
+      fc.pre(clear(frames, 0, 0, 1, 0));
+      const r = clearOffset(frames, { ...GRID, margin: w.margin });
+      return r.dx === 0 && r.dy === 0 && r.k === 1 && !r.moved;
+    }));
+  });
+
+  test("a moved chip clears every obstacle by the margin and stays inside, in every frame", () => {
+    fc.assert(fc.property(world, (w) => {
+      const frames = framesOf(w), r = clearOffset(frames, { ...GRID, margin: w.margin });
+      return !r.moved || clear(frames, r.dx, r.dy, r.k, w.margin);
+    }));
+  });
+
+  test("the move is the shortest the grid allows, at the largest scale that allows one", () => {
+    fc.assert(fc.property(world, (w) => {
+      const frames = framesOf(w), r = clearOffset(frames, { ...GRID, margin: w.margin });
+      fc.pre(r.moved);
+      const d = r.dx * r.dx + r.dy * r.dy;
+      for (const k of GRID.scales) {
+        for (const dx of GRID.dxs) for (const dy of GRID.dys) {
+          const ok = clear(frames, dx, dy, k, w.margin);
+          if (k > r.k && ok) return false;                          // a larger size fitted somewhere
+          if (k === r.k && ok && dx * dx + dy * dy < d) return false; // a shorter move fitted
+        }
+      }
+      return true;
+    }));
+  });
+
+  // crowded worlds too, so that both sides of "stuck" come up
+  const crowded = world.chain((w) => fc.array(fc.record({ x: fc.integer({ min: 0, max: 200 }), y: fc.integer({ min: 0, max: 200 }),
+    w: fc.integer({ min: 20, max: 120 }), h: fc.integer({ min: 10, max: 60 }) }), { minLength: 0, maxLength: 30 })
+    .map((extra) => ({ ...w, obstacles: [...w.obstacles, ...extra] })));
+
+  test("reports stuck exactly when neither the design position nor any offset at any scale clears", () => {
+    fc.assert(fc.property(crowded, (w) => {
+      const frames = framesOf(w), r = clearOffset(frames, { ...GRID, margin: w.margin });
+      const none = !clear(frames, 0, 0, 1, 0)
+        && GRID.scales.every((k) => GRID.dxs.every((dx) => GRID.dys.every((dy) => !clear(frames, dx, dy, k, w.margin))));
+      return !!r.stuck === none && (!r.stuck || (r.dx === 0 && r.dy === 0 && r.k === 1));
+    }), { numRuns: 300 });
+  });
+
+  test("the design position is judged on designFrames alone; a move must clear every frame", () => {
+    fc.assert(fc.property(world, fc.integer({ min: 1, max: 12 }), (w, slide) => {
+      const rest = framesOf(w);
+      // the same frames with the chip slid `slide` px lower, as it is while fading in and out
+      const moving = rest.map((f) => ({ ...f, at: (dx, dy, k) => { const r = f.at(dx, dy, k); return { ...r, y: r.y + slide }; } }));
+      const r = clearOffset(moving, { ...GRID, margin: w.margin, designFrames: rest });
+      if (clear(rest, 0, 0, 1, 0)) return r.dx === 0 && r.dy === 0 && r.k === 1 && !r.moved;
+      return !r.moved || clear(moving, r.dx, r.dy, r.k, w.margin);
+    }));
+  });
+
+  test("hits is symmetric and grows with the margin", () => {
+    fc.assert(fc.property(box, box, fc.integer({ min: -5, max: 5 }), (a, b, m) =>
+      hits(a, b, m) === hits(b, a, m) && (!hits(a, b, m) || hits(a, b, m + 1))));
+  });
+
+  test("steps runs from lo by `by` and stops at or before hi", () => {
+    fc.assert(fc.property(fc.integer({ min: -500, max: 500 }), fc.integer({ min: 0, max: 900 }), fc.integer({ min: 1, max: 50 }),
+      (lo, span, by) => {
+        const s = steps(lo, lo + span, by);
+        return s[0] === lo && s.every((v, i) => i === 0 || v - s[i - 1] === by) && s.at(-1) <= lo + span && s.at(-1) + by > lo + span;
+      }));
+  });
+});
+

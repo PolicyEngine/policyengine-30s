@@ -9,11 +9,11 @@ permissions:
   contents: read
 
 env:
-  PYDEPS: --with pytest==9.1.1 --with hypothesis==6.168.1 --with numpy==2.5.3 --with scipy==1.18.1 --with pyloudnorm==0.2.0 --with pyyaml==6.0.3
+  PYDEPS: --with pytest==9.1.1 --with hypothesis==6.168.1 --with numpy==2.5.3 --with scipy==1.18.1 --with pyloudnorm==0.2.0 --with pyyaml==6.0.3 --with pyproj==3.8.0 --with shapely==2.1.2 --with pypdf==6.19.0
 
 jobs:
   invariants:
-    name: Invariants (published numbers, family curve, timeline helpers, score)
+    name: Invariants (published numbers, family curves, timeline helpers, score, UK geography)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,11 +32,13 @@ jobs:
           uv run --with pyyaml==6.0.3 tools/adapt_outputs.py > /dev/null
           uv run --with pyyaml==6.0.3 tools/build_video_data.py
           test -z "$(git status --porcelain -- data/)" || { git status; git diff; exit 1; }
-      - name: Published numbers, family curve, score (pytest + Hypothesis)
-        run: uv run $PYDEPS pytest -m "not slow"
+      - name: Published numbers, family curves, score, UK geography (pytest + Hypothesis)
+        run: |
+          uv run $PYDEPS pytest -m "not slow"
+          test -z "$(git status --porcelain -- data/)" || { git status; git diff; exit 1; }
 
   determinism:
-    name: Frames depend only on t (both layouts)
+    name: Frames depend only on t (both layouts, US and UK)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -50,3 +52,34 @@ jobs:
       - run: bunx playwright install --with-deps chromium
       - run: bun run build
       - run: bun run determinism
+      - name: Keep the mismatched frames
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: determinism-frames
+          path: frames/determinism/
+
+  us-film-unchanged:
+    # Work on another country must not move a single US pixel. A PR that means to change the US film
+    # carries the us-film-changes label, and the job is skipped.
+    name: The US film is unchanged against the base branch
+    if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'us-film-changes')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.12
+      - run: bun install --frozen-lockfile
+      - run: bunx playwright install --with-deps chromium
+      - run: bun run build
+      - name: Build the base branch alongside
+        run: |
+          git worktree add ../base ${{ github.event.pull_request.base.sha }}
+          cd ../base && bun install --frozen-lockfile && bun build site/main.js --outfile site/bundle.js --format iife
+      - run: node tools/compare_revisions.mjs ../base us 1920x1080,1080x1920 0.2

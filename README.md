@@ -11,6 +11,8 @@ The rendered files are attached to the [latest release](../../releases/latest); 
 | `out/policyengine-30s-vertical-1080x1920.mp4` | 1080×1920, 60 fps (Reels, Shorts, TikTok) |
 | `out/posters-16x9/`, `out/posters-9x16/` | 2× stills at 12.9, 18.9, 23.6 and 28.8 s for thumbnails |
 
+A UK version (`?country=uk`) runs the same timeline on UK law: the Income Tax Act 2007 personal allowance, the policyengine-uk parameter file, a single parent in Manchester across earnings, and the 650 Westminster constituencies. Its national figures come from policyengine.py 6.2.0 (policyengine-uk 2.102.3) on the enhanced Family Resources Survey 2024-25; the survey microdata and the map's record-level draws stay out of the repo (`data/uk/private/`, git-ignored), so a fresh clone renders the UK map with placeholder dots under the MOCK DATA banner. Sources and checks for every UK string are in [`data/uk/README.md`](data/uk/README.md); `tools/render_all.sh uk` writes the files to `out/uk/`.
+
 ## The story
 
 | Time | Scene | Source of what's on screen |
@@ -77,6 +79,7 @@ These hold for every input, and `bun run test` plus CI check them (`tests/`, `.g
 - `site/` — a deterministic HTML/canvas timeline. `window.renderAt(t)` draws the frame at time `t`; nothing depends on wall-clock time or `Math.random`.
 - `tools/render.mjs` — Playwright drives headless Chromium frame by frame. `--stream out.mp4` pipes PNG screenshots straight into parallel ffmpeg encoders and joins the segments, so no frames touch the disk.
 - `tools/soundtrack.py` — the score is synthesized with numpy/scipy at 120 BPM (D minor; Bb → C → F under the wordmark), mastered to −14 LUFS integrated with a 4× oversampled true-peak limiter at −2 dBTP. The loud transients are shaped where they are made, so the limiter only shaves strays: the drum bus is soft-clipped (4× oversampled, found through the master's high-pass) with kick and clap eased back on the backbeats, and the hit and drop smoothly dip themselves and the music (and the drums for longer) instead of rippling the whole mix with the limiter. Sound effects come from `events.json`, which the page exports from the same timeline, so each click and soft mallet note lands on the frame that causes it; gainer notes rise in pitch with the $800 step, and the family curve brightens a held chord as the gain rises.
+- `tools/compare_revisions.mjs` — renders a film from this checkout and from another (in CI, the PR's base) every 0.2 s in both layouts and compares them. On pull requests CI runs it for the US film, so work on another country cannot move a US pixel; a PR meant to change the US film carries the `us-film-changes` label.
 - `tools/determinism.mjs` — proves a fresh page and a page that played the film up to *t* render identical pixels at 11 timestamps, in both layouts. Streaming workers start mid-film, so this is what makes parallel rendering safe.
 - `tools/adapt_outputs.py` → `tools/build_video_data.py` — turn the raw PolicyEngine outputs into `data/video.json`, the only data the page reads. If any input is missing the page paints a striped MOCK DATA banner on every frame.
 
@@ -90,12 +93,14 @@ bun run score         # timeline cues -> audio/events.json -> audio/score.wav
 bun run determinism   # fresh-page frames == played-through frames, both layouts
 bun run render        # 4K/60 master, 1080p/60, 9:16 (supersampled from 2x), posters
 bun run check         # specs, loudness, true peak, single-frame glitch scan
-bun run test          # invariants (Vitest + fast-check, pytest + Hypothesis)
+bun run test          # invariants (Vitest + fast-check, pytest + Hypothesis), US and UK
 ```
+
+UK: `uv run --no-project --with pyyaml python tools/uk/build_uk_video.py` asserts every on-screen UK statement and writes `data/uk/video.json`; the score comes from `node tools/render.mjs --country uk --stills 12 --out frames/probe --events audio/uk/events.json` and then `tools/soundtrack.py audio/uk/events.json audio/uk/score.wav`, and `tools/render_all.sh uk` renders.
 
 Recomputing the PolicyEngine outputs themselves (`data/compute/*.py`) needs the pinned environment in `data/compute/requirements.lock.txt` and the dataset from Hugging Face; each script's docstring gives its run command.
 
-Preview any moment in a browser: `node tools/serve.mjs 4317`, then open `http://127.0.0.1:4317/site/index.html?t=17.5` (or `?play=1`, or `?w=1080&h=1920` for portrait).
+Preview any moment in a browser: `node tools/serve.mjs 4317`, then open `http://127.0.0.1:4317/site/index.html?t=17.5` (or `?play=1`, or `?w=1080&h=1920` for portrait, or `&country=uk`).
 
 ## Credits
 
@@ -106,8 +111,15 @@ Preview any moment in a browser: `node tools/serve.mjs 4317`, then open `http://
 - Microdata: PolicyEngine `populace-us` (`populace_us_2024.h5@populace-us-2024-spm-20260915`, MIT, huggingface.co/datasets/policyengine/populace-us). `data/households_sample.json` holds derived fields for 6,976 of its household records.
 - Congressional district boundaries (`data/district_geography.json`, used to place dots): US Census Bureau cartographic boundary file `cb_2024_us_cd119_20m` (public domain), via `PolicyEngine/policyengine-app-v2`.
 - Congressional district hex layout (`data/district_layout.json`; kept for the record, not shown in the video): House hexmap v3.1 by Daniel Donner, Daily Kos Elections / The Downballot (the-downballot.com; original release dkel.ec/map), via `PolicyEngine/snap-district-map` and `PolicyEngine/policyengine-app-v2`, licensed CC BY 4.0. Changes: district IDs re-keyed to PolicyEngine GEOIDs, centroids and bounding boxes added; polygons unmodified.
+- UK version (`data/uk/`, details and checks in `data/uk/README.md`):
+  - `data/uk/amount.yaml`: verbatim from `PolicyEngine/policyengine-uk` (`policyengine_uk/parameters/gov/hmrc/income_tax/allowances/personal_allowance/amount.yaml`) at commit 412b25aa, AGPL-3.0.
+  - Statute text (`data/uk/statute.json`): Income Tax Act 2007, Part 3, and Finance Act 2021 s. 5, from legislation.gov.uk. Contains public sector information licensed under the Open Government Licence v3.0.
+  - Edward VI, "Discourse on the Reformation of Abuses" (1551, public domain), as printed in J. G. Nichols (ed.), *Literary Remains of King Edward the Sixth*, vol. 2 (Roxburghe Club, 1857), p. 486, via the Internet Archive.
+  - UK national figures: Department for Work and Pensions. (2026). Family Resources Survey, 2024-2025. [data collection]. UK Data Service. SN: 9563, DOI: http://doi.org/10.5255/UKDA-SN-9563-1 (© Crown copyright; UK Data Service End User Licence), as enhanced by PolicyEngine's `policyengine-uk-data` 1.56.16 (`enhanced_frs_2024_25`), which also imputes from the Wealth and Assets Survey, the Living Costs and Food Survey, the Effects of Taxes and Benefits data and HMRC's Survey of Personal Incomes (see `data/uk/README.md`). The data creators, depositors and the UK Data Service bear no responsibility for the analysis here. Only aggregates are published; no record-level data is in this repository.
+  - Westminster constituency boundaries, July 2024 (`data/uk/geography.json`, simplified), and the ONS region and country lookups. Source: Office for National Statistics licensed under the Open Government Licence v.3.0. Contains OS data © Crown copyright and database right 2024.
+  - The UK family curve is computed from single households defined in `tools/uk/uk_family.py`. The national figures come from the enhanced Family Resources Survey 2024-25 (policyengine-uk-data 1.56.16) through policyengine.py 6.2.0; the FRS is UK Data Service data under its End User Licence, so only aggregates are committed.
 - Fonts: Inter, JetBrains Mono and Newsreader (SIL Open Font License, via Fontsource). US state shapes: `us-atlas` (Census cartographic boundaries). The score is synthesized by `tools/soundtrack.py`.
 
 ## License
 
-Code in this repository is released under the [MIT License](LICENSE). Original text and figures are released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) with attribution to PolicyEngine. Third-party material keeps its own terms (see Credits): `data/base.yaml` (AGPL-3.0), `data/district_layout.json` (CC BY 4.0, Daily Kos Elections / The Downballot), and the PolicyEngine name and logo.
+Code in this repository is released under the [MIT License](LICENSE). Original text and figures are released under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) with attribution to PolicyEngine. Third-party material keeps its own terms (see Credits): `data/base.yaml` and `data/uk/amount.yaml` (AGPL-3.0), the UK statute text and boundaries (Open Government Licence v3.0), `data/district_layout.json` (CC BY 4.0, Daily Kos Elections / The Downballot), and the PolicyEngine name and logo.

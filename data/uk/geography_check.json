@@ -1,0 +1,623 @@
+{
+ "meta": {
+  "script": "tools/uk/check_uk_geography.mjs",
+  "d3_geo": "3.1.1",
+  "input": "data/uk/geography.json",
+  "notes": [
+   "used_px: projected width and height of all 650 constituencies after fitExtent into the layout's map box (stage px; the 4K master is the same stage at 2x).",
+   "area_scale_min_max_vs_median: projected area per km2 of each constituency divided by the median; a dot-density map reads fairly when this is close to 1 everywhere.",
+   "lowest_bbox_fill: constituency area over its projected bounding box; p_miss = (1 - fill)^400, the chance that one dot's 400 rejection-sampling tries all miss, in which case site/main.js keeps the last try, which is outside the shape."
+  ]
+ },
+ "sphere": {
+  "total_km2": 243256.4,
+  "by_nation_km2": {
+   "England": 130138.1,
+   "Northern Ireland": 14236.9,
+   "Scotland": 78167.9,
+   "Wales": 20713.5
+  },
+  "python_geodesic_kept_km2": {
+   "England": 130656.3,
+   "Northern Ireland": 14300.2,
+   "Scotland": 78552.9,
+   "Wales": 20794.9
+  },
+  "note": "d3 geoArea on a sphere of radius 6371.0088 km vs pyproj's WGS84 ellipsoid in the build script"
+ },
+ "projections": {
+  "geoConicConformal().parallels([50, 58]).rotate([2.5, 0])": {
+   "landscape 1920x1080": {
+    "box": [
+     [
+      660,
+      290
+     ],
+     [
+      1800,
+      960
+     ]
+    ],
+    "used_px": [
+     361.3,
+     670
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 1.812,
+    "area_scale_min_max_vs_median": [
+     0.9989,
+     1.0098
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.9
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 2.1
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 2.3
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0669,
+      "p_miss": 9.36e-13
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0684,
+      "p_miss": 4.84e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1778,
+      "p_miss": 9.57e-35
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.2323,
+      "p_miss": 1.22e-46
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2636,
+      "p_miss": 6.97e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.156
+   },
+   "portrait 1080x1920": {
+    "box": [
+     [
+      72,
+      560
+     ],
+     [
+      1008,
+      1160
+     ]
+    ],
+    "used_px": [
+     323.6,
+     600
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 2.024,
+    "area_scale_min_max_vs_median": [
+     0.9989,
+     1.0098
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.5
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 1.7
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 1.8
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0669,
+      "p_miss": 9.36e-13
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0684,
+      "p_miss": 4.84e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1778,
+      "p_miss": 9.57e-35
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.2323,
+      "p_miss": 1.22e-46
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2636,
+      "p_miss": 6.97e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.156
+   }
+  },
+  "geoTransverseMercator().rotate([2, 0])": {
+   "landscape 1920x1080": {
+    "box": [
+     [
+      660,
+      290
+     ],
+     [
+      1800,
+      960
+     ]
+    ],
+    "used_px": [
+     361.8,
+     670
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 1.807,
+    "area_scale_min_max_vs_median": [
+     0.9999,
+     1.003
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.9
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 2.1
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 2.3
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0667,
+      "p_miss": 1.01e-12
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0681,
+      "p_miss": 5.63e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1791,
+      "p_miss": 5.16e-35
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.228,
+      "p_miss": 1.12e-45
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2637,
+      "p_miss": 6.62e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.155
+   },
+   "portrait 1080x1920": {
+    "box": [
+     [
+      72,
+      560
+     ],
+     [
+      1008,
+      1160
+     ]
+    ],
+    "used_px": [
+     324,
+     600
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 2.018,
+    "area_scale_min_max_vs_median": [
+     0.9999,
+     1.003
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.5
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 1.7
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 1.8
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0667,
+      "p_miss": 1.01e-12
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0681,
+      "p_miss": 5.63e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1791,
+      "p_miss": 5.16e-35
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.228,
+      "p_miss": 1.12e-45
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2637,
+      "p_miss": 6.62e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.155
+   }
+  },
+  "geoConicEqualArea().parallels([50, 58]).rotate([2.5, 0])": {
+   "landscape 1920x1080": {
+    "box": [
+     [
+      660,
+      290
+     ],
+     [
+      1800,
+      960
+     ]
+    ],
+    "used_px": [
+     360.9,
+     670
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 1.811,
+    "area_scale_min_max_vs_median": [
+     1,
+     1
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.9
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 2.1
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 2.3
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0669,
+      "p_miss": 9.29e-13
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0684,
+      "p_miss": 4.87e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1778,
+      "p_miss": 9.7e-35
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.232,
+      "p_miss": 1.39e-46
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2636,
+      "p_miss": 7e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.154
+   },
+   "portrait 1080x1920": {
+    "box": [
+     [
+      72,
+      560
+     ],
+     [
+      1008,
+      1160
+     ]
+    ],
+    "used_px": [
+     323.2,
+     600
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 2.022,
+    "area_scale_min_max_vs_median": [
+     1,
+     1
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.5
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 1.7
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 1.8
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0669,
+      "p_miss": 9.29e-13
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0684,
+      "p_miss": 4.87e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1778,
+      "p_miss": 9.7e-35
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.232,
+      "p_miss": 1.39e-46
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2636,
+      "p_miss": 7e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.154
+   }
+  },
+  "geoMercator()": {
+   "landscape 1920x1080": {
+    "box": [
+     [
+      660,
+      290
+     ],
+     [
+      1800,
+      960
+     ]
+    ],
+    "used_px": [
+     358.8,
+     670
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 1.966,
+    "area_scale_min_max_vs_median": [
+     0.9023,
+     1.4714
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.5
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 1.7
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 1.8
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0677,
+      "p_miss": 6.54e-13
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0687,
+      "p_miss": 4.27e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1649,
+      "p_miss": 4.9e-32
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.2067,
+      "p_miss": 5.84e-41
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2637,
+      "p_miss": 6.49e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.177
+   },
+   "portrait 1080x1920": {
+    "box": [
+     [
+      72,
+      560
+     ],
+     [
+      1008,
+      1160
+     ]
+    ],
+    "used_px": [
+     321.3,
+     600
+    ],
+    "binding": "height",
+    "km_per_stage_px_median": 2.196,
+    "area_scale_min_max_vs_median": [
+     0.9023,
+     1.4714
+    ],
+    "smallest_constituencies_stage_px2": [
+     {
+      "code": "E14001086",
+      "name": "Bethnal Green and Stepney",
+      "px2": 1.2
+     },
+     {
+      "code": "E14001559",
+      "name": "Vauxhall and Camberwell Green",
+      "px2": 1.4
+     },
+     {
+      "code": "E14001435",
+      "name": "Queen's Park and Maida Vale",
+      "px2": 1.5
+     }
+    ],
+    "lowest_bbox_fill": [
+     {
+      "code": "S14000027",
+      "name": "Na h-Eileanan an Iar",
+      "fill": 0.0677,
+      "p_miss": 6.54e-13
+     },
+     {
+      "code": "S14000051",
+      "name": "Orkney and Shetland",
+      "fill": 0.0687,
+      "p_miss": 4.27e-13
+     },
+     {
+      "code": "E14001511",
+      "name": "St Ives",
+      "fill": 0.1649,
+      "p_miss": 4.9e-32
+     },
+     {
+      "code": "E14001409",
+      "name": "Norwich South",
+      "fill": 0.2067,
+      "p_miss": 5.84e-41
+     },
+     {
+      "code": "E14001143",
+      "name": "Burton and Uttoxeter",
+      "fill": 0.2637,
+      "p_miss": 6.49e-54
+     }
+    ],
+    "constituencies_with_p_miss_over_1e6": 0,
+    "scale_gain_if_shetland_inset": 1.177
+   }
+  }
+ },
+ "failures": 0
+}
