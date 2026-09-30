@@ -25,7 +25,7 @@ import wave
 from pathlib import Path
 
 import numpy as np
-from scipy.signal import butter, fftconvolve, lfilter, sosfilt
+from scipy.signal import butter, fftconvolve, lfilter, resample_poly, sosfilt
 
 SR = 48000
 DUR = 30.0
@@ -89,6 +89,25 @@ def saw(freq, n, phase=0.0):
 def tri(freq, n):
     ph = (np.cumsum(np.full(n, freq)) / SR) % 1.0
     return 2 * np.abs(2 * ph - 1) - 1
+
+
+def soft_clip(x, ceil, knee):
+    """x with its peaks past knee rounded off toward ceil: a tanh shoulder that leaves the knee
+    at slope 1. The peaks are found as the master will see them, through its 30 Hz high-pass
+    (which lifts the score's kick 1.6 dB past its dry peak) and at 4x, so intersample
+    peaks count and most of the curve's new harmonics are filtered off on the way back down, not
+    folding into the audio (4x reduces aliasing; it does not remove it). Only the excess is
+    taken off x: a signal that never reaches the knee comes back bit for bit, and so does every
+    sample further from a peak than the resampling filter reaches (10 samples). The excess comes
+    off the dry signal, which the master's high-pass then reshapes, so a peak lands near ceil
+    rather than under it: a lone kick about 1 dB past."""
+    up = resample_poly(hp(x, 30), 4, 1, axis=-1)
+    a = np.abs(up)
+    over = a > knee
+    w = ceil - knee
+    cut = np.zeros_like(up)
+    cut[over] = up[over] - np.sign(up[over]) * (knee + w * np.tanh((a[over] - knee) / w))
+    return x - resample_poly(cut, 1, 4, axis=-1)
 
 
 def place(buf, sig, t, gain=1.0, pan=0.0):
@@ -195,6 +214,54 @@ def level_sweeps(bed, sweeps, report=None):
     return out
 
 
+# ------------------------------------------------------------------ headroom
+# The master normalizes to -14 LUFS (about +6.5 dB for this score) and then limits at
+# -2 dBTP, so its ceiling sits near 0.37 on the mix before it. Where a kick and clap landed
+# together the mix went 4.3-6.5 dB past that, on every backbeat, and 6.4-7.6 dB where the hit
+# and drop landed on a kick: the limiter caught them, and the whole mix (pad, arp, bass, cues)
+# dipped with it, by over 1 dB for about 200 ms after each clap and for 0.66-0.75 s, in
+# bursts, after each impact. Those peaks are now shaped where they are made, at the levels the
+# limiter used to let through, so the balance heard before stays and the limiter is left with
+# stray peaks.
+# the drum bus (into the mix at 0.92) soft-clips 3 dB under the master's ceiling (a kick comes
+# through about 1 dB past that: see soft_clip), leaving room for the music under it; the curve
+# spans the top 3 dB
+DRUM_CEIL = 0.28
+DRUM_KNEE = DRUM_CEIL / np.sqrt(2)
+BACKBEAT = 2 / 3   # kick and clap together: the limiter held their first 100 ms about 3.6 dB down
+# The room an impact takes: as it lands, it and the music drop to IMPACT[kind] and come back
+# with time constant IMPACT_RELEASE (over 1 dB down for 0.85-0.9 s), smoothly, where the
+# limiter re-triggered on every cycle of the boom and rippled the whole mix 2-3.3 dB. The drums
+# come back with DRUM_RELEASE instead (over 1 dB down for 2.1-2.3 s): it is their hits under
+# the ringing boom that would still peak. The cues riding over it keep their level.
+IMPACT = {"hit": 0.55, "drop": 0.5}
+IMPACT_RELEASE = 0.6
+DRUM_RELEASE = 1.5
+# the land's thump and ping went 1.3 dB past the ceiling on their own, and the limiter cut up
+# to 2 dB there (over 1 dB for about 100 ms); they now play 1.9 dB down instead
+LAND = 0.8
+
+
+def impact_gain(events, release):
+    """The gain the impacts in events leave the rest of the score: down to IMPACT[kind] over the
+    3 ms before each one lands (the master's lookahead, so no gain steps under the attack), then
+    back toward 1 with time constant release, ending after ten of them (a step under 1e-4);
+    where two overlap, the lower one."""
+    g = np.ones(N)
+    ramp = int(0.003 * SR)
+    for e in events:
+        if e["type"] not in IMPACT:
+            continue
+        i = int(round(e["t"] * SR))
+        depth = 1 - IMPACT[e["type"]]
+        env = 1 - depth * np.concatenate([np.linspace(0, 1, ramp, endpoint=False),
+                                          exp_decay(int(10 * release * SR), release)])
+        a, b = max(0, i - ramp), min(N, i - ramp + len(env))
+        if b > a:
+            g[a:b] = np.minimum(g[a:b], env[a - (i - ramp): b - (i - ramp)])
+    return g
+
+
 # ------------------------------------------------------------------ harmony
 # D minor, four chords per 8-second cycle: Dm - Bb - F - C (i - VI - III - VII)
 CHORDS = [
@@ -297,8 +364,10 @@ def build(events, report=None, stems=None):
     master ("bed_pre", "sweeps_pre") and after it ("bed", "sweeps"). The master is a filter
     and one gain envelope shared by both, so the mastered stems sum to the score."""
     mus = np.zeros((2, N))   # music bus (gets ducked by the kick)
-    drm = np.zeros((2, N))   # drums
+    drm = np.zeros((2, N))   # kick and clap (soft-clipped below)
+    hats = np.zeros((2, N))  # hats, which the clip leaves alone
     sfx = np.zeros((2, N))   # effects
+    imp = np.zeros((2, N))   # the hit and drop, which take their room below
     sweeps = []              # noise sweeps, levelled against the finished bed (see level_sweeps)
 
     def sweep_buf():
@@ -368,6 +437,7 @@ def build(events, report=None, stems=None):
 
     # drums
     kick_s, hat_c, hat_o, clap_s = kick(), hat(), hat(True), clap()
+    impacts = [e["t"] for e in events if e["type"] in IMPACT]
     for k in range(int(DUR / BEAT)):
         t = k * BEAT
         sec = section(t)
@@ -376,7 +446,7 @@ def build(events, report=None, stems=None):
             if beat_in_bar in (0, 2):
                 place(drm, kick_s, t, 0.5)
                 duck_at(duck, t, 0.45)
-            place(drm, hat_c, t + BEAT / 2, 0.22, 0.25)
+            place(hats, hat_c, t + BEAT / 2, 0.22, 0.25)
             if beat_in_bar == 0 and 7.9 < t < 8.1:
                 for s16 in range(4):
                     place(drm, clap_s, t + s16 * BEAT / 4, 0.12 + 0.08 * s16)
@@ -385,19 +455,24 @@ def build(events, report=None, stems=None):
                 continue  # drop out under the riser
             if sec == 4 and t < 24 and beat_in_bar in (1, 3):
                 continue  # half-time under the decile chart
-            place(drm, kick_s, t, 0.6)
-            duck_at(duck, t, 0.35)
             ripple = 15.0 <= t < 17.0
-            if beat_in_bar in (1, 3) and not ripple:
-                place(drm, clap_s, t, 0.55 if sec > 2 else 0.4)
+            backbeat = beat_in_bar in (1, 3) and not ripple
+            # the kick steps back under the clap, and under the ripple of plinks, which already
+            # rests the clap and open hat and thins the arp; where a hit or drop lands, its boom
+            # is the kick
+            if not any(abs(t - ti) < 0.03 for ti in impacts):
+                place(drm, kick_s, t, 0.6 * (BACKBEAT if backbeat else 0.75 if ripple else 1.0))
+                duck_at(duck, t, 0.35)
+            if backbeat:
+                place(drm, clap_s, t, (0.55 if sec > 2 else 0.4) * BACKBEAT)
             if not ripple:
-                place(drm, hat_o, t + BEAT / 2, 0.35, 0.2)
+                place(hats, hat_o, t + BEAT / 2, 0.35, 0.2)
             for s in (1, 3):
-                place(drm, hat_c, t + s * BEAT / 4, 0.25, -0.2)
+                place(hats, hat_c, t + s * BEAT / 4, 0.25, -0.2)
     # intro hats: quiet ticking sixteenths like a clock under the quote
     for k in range(int(4.0 / (BEAT / 4))):
         t = k * BEAT / 4
-        place(drm, hat_c, t, 0.16 + 0.08 * (k % 4 == 0), 0.3 if k % 2 else -0.3)
+        place(hats, hat_c, t, 0.16 + 0.08 * (k % 4 == 0), 0.3 if k % 2 else -0.3)
 
     # ---------------------------------------------------------- effects
     for e in events:
@@ -426,9 +501,9 @@ def build(events, report=None, stems=None):
         elif kind == "land":
             n = int(0.5 * SR)
             thump = np.tanh(2.5 * np.sin(2 * np.pi * 110 * t_axis(n)) * exp_decay(n, 0.08)) * 0.6
-            place(sfx, thump, t, 0.9)
+            place(sfx, thump, t, 0.9 * LAND)
             k = int(0.04 * SR)
-            place(sfx, np.sin(2 * np.pi * 1320 * t_axis(k)) * exp_decay(k, 0.008) * 0.5, t, 1.0)
+            place(sfx, np.sin(2 * np.pi * 1320 * t_axis(k)) * exp_decay(k, 0.008) * 0.5, t, LAND)
         elif kind == "key":
             n = int(0.03 * SR)
             lo, hi_ = (2500, 6000) if e["i"] % 2 == 0 else (4000, 9000)
@@ -475,16 +550,16 @@ def build(events, report=None, stems=None):
         elif kind == "hit":
             n = int(2.5 * SR)
             boom = np.sin(2 * np.pi * np.cumsum(38 + 60 * exp_decay(n, 0.05)) / SR) * exp_decay(n, 0.5)
-            place(sfx, boom * 0.5, t, 1.0)
+            place(imp, boom * 0.5, t, 1.0)
             for m in CHORDS[2]:
-                place(sfx, pad_voice(m + 12, n) * exp_decay(n, 0.7) * 0.5, t, 0.5)
-            place(sfx, hp(rng.standard_normal(n), 5000) * exp_decay(n, 0.6) * 0.25, t, 1.0)
+                place(imp, pad_voice(m + 12, n) * exp_decay(n, 0.7) * 0.5, t, 0.5)
+            place(imp, hp(rng.standard_normal(n), 5000) * exp_decay(n, 0.6) * 0.25, t, 1.0)
         elif kind == "drop":
             n = int(3.0 * SR)
             boom = np.sin(2 * np.pi * np.cumsum(30 + 90 * exp_decay(n, 0.08)) / SR) * exp_decay(n, 0.9)
-            place(sfx, np.tanh(2 * boom) * 0.35, t, 1.0)
-            place(sfx, hp(rng.standard_normal(n), 4000) * exp_decay(n, 0.9) * 0.22, t, 1.0, -0.3)
-            place(sfx, hp(rng.standard_normal(n), 4000) * exp_decay(n, 0.9) * 0.22, t, 1.0, 0.3)
+            place(imp, np.tanh(2 * boom) * 0.35, t, 1.0)
+            place(imp, hp(rng.standard_normal(n), 4000) * exp_decay(n, 0.9) * 0.22, t, 1.0, -0.3)
+            place(imp, hp(rng.standard_normal(n), 4000) * exp_decay(n, 0.9) * 0.22, t, 1.0, 0.3)
         elif kind == "plink":
             nlit, step = e["n"], e.get("step", 1)
             # G5 -> D6 -> A6: one child's worth, two, three or more; fits both Dm and C
@@ -512,8 +587,15 @@ def build(events, report=None, stems=None):
                 v = pad_voice(m, n) * exp_decay(n, 1.0)
                 place(sfx, lp(v, 3000), t, 0.16, rng.uniform(-0.5, 0.5))
 
-    # sidechain duck on the music bus
-    mus *= duck[None, :]
+    # an impact takes its room: it, the music and the drums step back as it lands (the cues
+    # riding over it don't)
+    room = impact_gain(events, IMPACT_RELEASE)
+    sfx += imp * room[None, :]
+    drums_room = impact_gain(events, DRUM_RELEASE)[None, :]
+    drm *= drums_room
+    hats *= drums_room
+    # sidechain duck on the music bus: the kick's, or the impact's room where that is deeper
+    mus *= np.minimum(duck, room)[None, :]
     # the outro: music fades under the logo resolve
     fade = np.ones(N)
     a, b = int(26.0 * SR), int(29.6 * SR)
@@ -521,16 +603,20 @@ def build(events, report=None, stems=None):
     fade[b:] = 0
     mus *= fade[None, :]
     drm *= fade[None, :]
+    hats *= fade[None, :]
     tail = np.ones(N)
     a2, b2 = int(28.0 * SR), int(29.8 * SR)
     tail[a2:b2] = np.linspace(1, 0, b2 - a2) ** 2
     tail[b2:] = 0
     sfx *= tail[None, :]
 
+    # a clap on a kick's swing is rounded off here, where the limiter used to take the whole mix
+    # down for it; the hats, panned and never the problem, go round the clip
+    drm = soft_clip(drm, DRUM_CEIL, DRUM_KNEE) + hats
     bed = verb(mus, 0.28) + verb(drm, 0.08) + verb(sfx, 0.32)
     air = level_sweeps(bed, sweeps, report)
     mix = bed + air
-    # gentle master: glue + soft clip, then normalize loudness to ~-14 LUFS (RMS proxy)
+    # the master: normalize to -14 LUFS integrated (pyloudnorm), then a true-peak limiter at -2 dBTP
     mix = hp(mix, 30)
     env = np.ones(N)   # the master's gain envelope, tracked for the stems
     import pyloudnorm as pyln
