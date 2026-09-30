@@ -530,10 +530,15 @@ function placeChips(wr) {
   const near = textRects(wall)
     .map((r) => ({ x: r.x - wr.x, y: r.y - wr.y, w: r.w, h: r.h }))
     .filter((r) => Math.abs(r.y - M.amt.y) < 400 && Math.abs(r.x - M.amt.x) < 700);
-  // the wall is legible until it starts to blur away under the flight (scene1: blur from flyStart)
-  const lawFrames = [];
-  for (let t = T.zoomAmt + 0.1; t <= T.flyStart + 0.15; t += 1 / 60) {
-    if (env(t, T.zoomAmt + 0.1, T.zoomAmt + 0.35, T.flyStart + 0.3, T.flyStart + 0.55) < 0.1) continue;
+  // Every frame the chip shows while the wall is legible (scene1: the wall fades from flyStart + 0.1 and
+  // blurs from flyStart; past half opacity or 2 px of blur, overlap no longer reads), with the slide the
+  // chip enters and leaves on. The design position is judged at rest (see clearOffset).
+  const lawV = (t) => env(t, T.zoomAmt + 0.1, T.zoomAmt + 0.35, T.flyStart + 0.3, T.flyStart + 0.55);
+  const legible = (t) => 1 - P(t, T.flyStart + 0.1, T.flyStart + 0.6, E.inOutSine) >= 0.5 && 6 * P(t, T.flyStart, T.flyStart + 1.1) <= 2;
+  const lawFrames = [], lawRest = [];
+  for (let t = T.zoomAmt + 0.1; t <= Math.min(T.flyStart + 0.55, T.refIn - 0.2); t += 1 / 60) {
+    const v = lawV(t);
+    if (v < 0.1 || !legible(t)) continue;
     const c = wallCamera(t), pad = 5 * c.s;
     const ax = c.tx + M.amt.x * c.s, ay = c.ty + M.amt.y * c.s;
     const box = { x: ax - pad, y: ay - pad * 0.5, w: M.amt.w * c.s + pad * 2, h: M.amt.h * c.s + pad };
@@ -541,20 +546,27 @@ function placeChips(wr) {
       .filter((r) => hits(r, frame, 0));
     obstacles.push(box);
     const cx = ax + (M.amt.w * c.s) / 2;
-    // drawn centred on (left, top + h/2), scaled about its centre
-    lawFrames.push({ inside: frame, obstacles, at: (dx, dy, k) => ({
-      x: cx + dx - (k * chip.w) / 2, y: ay - 74 + dy + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h }) });
+    // drawn centred on (left, top + h/2), scaled about its centre, `ty` lower while it slides
+    const at = (ty) => (dx, dy, k) => ({ x: cx + dx - (k * chip.w) / 2, y: ay - 74 + dy + ty + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h });
+    lawFrames.push({ inside: frame, obstacles, at: at(lerp(12, 0, v)) });
+    lawRest.push({ inside: frame, obstacles, at: at(0) });
   }
-  M.lawChipOff = clearOffset(lawFrames, { dxs: steps(-800, 800, 8), dys: steps(-600, 400, 4), margin: 6, scales: [1, 0.9, 0.8, 0.75, 0.7] });
+  M.lawChipOff = clearOffset(lawFrames, { dxs: steps(-800, 800, 8), dys: steps(-600, 400, 4), margin: 6, scales: [1, 0.9, 0.8, 0.75, 0.7], designFrames: lawRest });
   // code: the panel is at rest while the chip shows; keep it inside the panel body, off every line's text
   const bar = rectOf(code.querySelector(".bar"));
   const codeText = codeLines.flatMap((d) => textRects(d));
   const body = { x: M.codeRect.x + 12, y: bar.y + bar.h + 6, w: M.codeRect.w - 12 - 28 + 1, h: M.codeRect.y + M.codeRect.h - 6 - (bar.y + bar.h + 6) };
   const right = M.codeRect.x + M.codeRect.w - 28;
-  // drawn right-aligned at `right`, scaled about its right-centre
-  M.refChipOff = clearOffset([{ inside: body, obstacles: codeText, at: (dx, dy, k) => ({
-    x: right + dx - k * chip.w, y: M.ref.y - 58 + dy + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h }) }],
-    { dxs: steps(-Math.round(M.codeRect.w), 0, 4), dys: steps(-500, 300, 2), margin: 4, scales: [1, 0.9, 0.8] });
+  // drawn right-aligned at `right`, scaled about its right-centre; every frame it shows, with its slide
+  const refV = (t) => env(t, T.refIn, T.refIn + 0.35, T.cap2In - 0.1, T.cap2In + 0.3);
+  const refFrames = [];
+  const refAt = (ty) => (dx, dy, k) => ({ x: right + dx - k * chip.w, y: M.ref.y - 58 + dy + ty + ((1 - k) * chip.h) / 2, w: k * chip.w, h: k * chip.h });
+  for (let t = T.refIn; t <= T.cap2In + 0.3; t += 1 / 60) {
+    const v = refV(t);
+    if (v >= 0.1) refFrames.push({ inside: body, obstacles: codeText, at: refAt(lerp(10, 0, v)) });
+  }
+  M.refChipOff = clearOffset(refFrames, { dxs: steps(-Math.round(M.codeRect.w), 0, 4), dys: steps(-500, 300, 2), margin: 4,
+    scales: [1, 0.9, 0.8], designFrames: [{ inside: body, obstacles: codeText, at: refAt(0) }] });
   window.__chips = { law: M.lawChipOff, ref: M.refChipOff };
 }
 

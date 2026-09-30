@@ -136,11 +136,12 @@ ani = f64(p_b["adjusted_net_income"])
 allowance = {
     "records_with_no_allowance_in_either_run": int(no_pa.sum()),
     "weighted_people_with_no_allowance_in_either_run": float(f64(p_b["person_weight"])[no_pa].sum()),
-    "lowest_adjusted_net_income_among_them": float(ani[no_pa].min()) if no_pa.any() else None,
+    # a bound, not the minimum: a minimum is one survey record's value, and this file holds aggregates only
+    "all_have_adjusted_net_income_of_at_least_gbp": 100_000 + 2 * PA_NEW,
     "records_whose_allowance_rose": int((pa_r > pa_b + 1e-6).sum()),
     "records_whose_allowance_rose_by_the_full_2430": int((np.abs(pa_r - pa_b - (PA_NEW - 12_570)) < 1e-6).sum()),
 }
-assert allowance["lowest_adjusted_net_income_among_them"] is None or allowance["lowest_adjusted_net_income_among_them"] >= 100_000 + 2 * PA_NEW
+assert not no_pa.any() or ani[no_pa].min() >= allowance["all_have_adjusted_net_income_of_at_least_gbp"]
 
 hw, pw, bw = f64(hh_b["household_weight"]), f64(p_b["person_weight"]), f64(bu_b["benunit_weight"])
 total_households = float(hw.sum())
@@ -190,7 +191,6 @@ bu_lose = bu_b["benunit_id"].isin(set(p_b.loc[p_b["household_id"].isin(lose_ids)
 winners["losers"] = {
     "records": int(lose.sum()),
     "weighted_households": float(hw[lose].sum()),
-    "largest_loss_gbp": float(-d_net[lose].min()) if lose.any() else 0.0,
     "change_among_losers_gbp": {
         "income_tax": float((f64(p_r["income_tax"]) - f64(p_b["income_tax"]))[p_b["household_id"].isin(lose_ids).to_numpy()].sum()),
         **{v: float((f64(bu_r[v]) - f64(bu_b[v]))[bu_lose.to_numpy()].sum()) for v in ("universal_credit", "pension_credit", "housing_benefit")},

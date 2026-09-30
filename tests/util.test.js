@@ -238,6 +238,17 @@ describe("clearOffset: where a chip goes when its design position covers text", 
     }), { numRuns: 300 });
   });
 
+  test("the design position is judged on designFrames alone; a move must clear every frame", () => {
+    fc.assert(fc.property(world, fc.integer({ min: 1, max: 12 }), (w, slide) => {
+      const rest = framesOf(w);
+      // the same frames with the chip slid `slide` px lower, as it is while fading in and out
+      const moving = rest.map((f) => ({ ...f, at: (dx, dy, k) => { const r = f.at(dx, dy, k); return { ...r, y: r.y + slide }; } }));
+      const r = clearOffset(moving, { ...GRID, margin: w.margin, designFrames: rest });
+      if (clear(rest, 0, 0, 1, 0)) return r.dx === 0 && r.dy === 0 && r.k === 1 && !r.moved;
+      return !r.moved || clear(moving, r.dx, r.dy, r.k, w.margin);
+    }));
+  });
+
   test("hits is symmetric and grows with the margin", () => {
     fc.assert(fc.property(box, box, fc.integer({ min: -5, max: 5 }), (a, b, m) =>
       hits(a, b, m) === hits(b, a, m) && (!hits(a, b, m) || hits(a, b, m + 1))));

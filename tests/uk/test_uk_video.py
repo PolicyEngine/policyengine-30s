@@ -298,6 +298,31 @@ def test_the_survey_sample_stays_out_of_git(v, nat):
             assert _record_like(json.loads((ROOT / f).read_text())) == [], f
 
 
+EXTREME = re.compile(r"(^|_)(min|max|minimum|maximum|largest|smallest|lowest|highest)(_|$)", re.I)
+
+
+def _extremes(x, path=""):
+    """Keys that name a minimum or maximum. Over survey records, an extreme is one record's value."""
+    found = []
+    if isinstance(x, dict):
+        for k, y in x.items():
+            if EXTREME.search(k):
+                found.append(f"{path}.{k}")
+            found += _extremes(y, f"{path}.{k}")
+    elif isinstance(x, list):
+        for i, y in enumerate(x):
+            found += _extremes(y, f"{path}[{i}]")
+    return found
+
+
+def test_the_national_run_publishes_no_single_record_extremes(nat):
+    """national.json holds aggregates only: sums, means, shares, counts and asserted bounds, never the
+    largest or smallest value of any survey record."""
+    assert _extremes(nat) == []
+    assert _extremes({"a": {"largest_loss_gbp": 1}, "b": [{"lowest_income": 2}], "rate_max": 3}) == [
+        ".a.largest_loss_gbp", ".b[0].lowest_income", ".rate_max"]
+
+
 def test_the_privacy_scan_catches_a_smuggled_sample(v):
     """The scan above is not vacuous: the real sample's row shape, hidden under any key, is caught."""
     rows = [["E14001063", 486.0, "E14001063", 5]] * 150 + [["NI", 0.0, None, 2]] * 50

@@ -58,19 +58,21 @@ export const hits = (a, b, m) => a.x < b.x + b.w + m && b.x < a.x + a.w + m && a
 // A chip sits where it was designed to unless text overlaps it there; then it takes the nearest offset
 // (dx, dy) that clears every obstacle by `margin` and stays inside `inside` in every frame it shows, at
 // full size if any offset allows, else at the largest of `scales` that does. frames: [{ at: (dx, dy, k)
-// => the chip's drawn rect, obstacles: [rects], inside: rect }]. Solved once, so frames stay
-// history-free. Where the design position is clear (the US film) the result is exactly (0, 0, 1).
-export function clearOffset(frames, { dxs, dys, margin, scales = [1] }) {
-  const ok = (dx, dy, k, m) => frames.every((f) => {
+// => the chip's drawn rect, obstacles: [rects], inside: rect }]. The design position is judged on
+// `designFrames` (default: frames): the chip at rest, since its entrance slide is part of the design.
+// Solved once, so frames stay history-free. Where the design position is clear (the US film) the
+// result is exactly (0, 0, 1).
+export function clearOffset(frames, { dxs, dys, margin, scales = [1], designFrames = frames }) {
+  const ok = (fs, dx, dy, k, m) => fs.every((f) => {
     const r = f.at(dx, dy, k), b = f.inside;
     if (r.x < b.x || r.y < b.y || r.x + r.w > b.x + b.w || r.y + r.h > b.y + b.h) return false;
     return !f.obstacles.some((o) => hits(r, o, m));
   });
-  if (ok(0, 0, 1, 0)) return { dx: 0, dy: 0, k: 1, moved: false };
+  if (ok(designFrames, 0, 0, 1, 0)) return { dx: 0, dy: 0, k: 1, moved: false };
   const cands = [];
   for (const dx of dxs) for (const dy of dys) cands.push([dx, dy, dx * dx + dy * dy]);
   cands.sort((p, q) => p[2] - q[2] || p[1] - q[1] || p[0] - q[0]);
-  for (const k of scales) for (const [dx, dy] of cands) if (ok(dx, dy, k, margin)) return { dx, dy, k, moved: true };
+  for (const k of scales) for (const [dx, dy] of cands) if (ok(frames, dx, dy, k, margin)) return { dx, dy, k, moved: true };
   return { dx: 0, dy: 0, k: 1, moved: false, stuck: true };
 }
 // lo, lo + by, ... up to hi
