@@ -298,7 +298,13 @@ def test_the_survey_sample_stays_out_of_git(v, nat):
             assert _record_like(json.loads((ROOT / f).read_text())) == [], f
 
 
-EXTREME = re.compile(r"(^|_)(min|max|minimum|maximum|largest|smallest|lowest|highest)(_|$)", re.I)
+EXTREME_WORDS = {"min", "max", "minimum", "maximum", "largest", "smallest", "lowest", "highest",
+                 "worst", "best", "peak", "extreme", "biggest"}
+
+
+def _key_words(k):
+    """snake_case, kebab-case, spaces and camelCase all split into lower-case words."""
+    return {w.lower() for w in re.split(r"[_\-\s]+|(?<=[a-z0-9])(?=[A-Z])", k) if w}
 
 
 def _extremes(x, path=""):
@@ -306,7 +312,7 @@ def _extremes(x, path=""):
     found = []
     if isinstance(x, dict):
         for k, y in x.items():
-            if EXTREME.search(k):
+            if _key_words(k) & EXTREME_WORDS:
                 found.append(f"{path}.{k}")
             found += _extremes(y, f"{path}.{k}")
     elif isinstance(x, list):
@@ -319,8 +325,16 @@ def test_the_national_run_publishes_no_single_record_extremes(nat):
     """national.json holds aggregates only: sums, means, shares, counts and asserted bounds, never the
     largest or smallest value of any survey record."""
     assert _extremes(nat) == []
-    assert _extremes({"a": {"largest_loss_gbp": 1}, "b": [{"lowest_income": 2}], "rate_max": 3}) == [
-        ".a.largest_loss_gbp", ".b[0].lowest_income", ".rate_max"]
+    assert _extremes({"a": {"largest_loss_gbp": 1}, "b": [{"lowest_income": 2}], "rate_max": 3,
+                      "maxLoss": 4, "worst-case": 5, "peak_gain": 6, "maximise_share": 7}) == [
+        ".a.largest_loss_gbp", ".b[0].lowest_income", ".rate_max", ".maxLoss", ".worst-case", ".peak_gain"]
+
+
+def test_small_groups_publish_counts_not_sums(nat):
+    """The losers' programme changes are sums over the losing records; with fewer than 10 records a
+    sum is close to one record's value, so the run then publishes the count and weight only."""
+    losers = nat["winners"]["losers"]
+    assert losers["records"] >= 10 or "change_among_losers_gbp" not in losers
 
 
 def test_the_privacy_scan_catches_a_smuggled_sample(v):

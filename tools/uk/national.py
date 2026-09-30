@@ -191,12 +191,17 @@ bu_lose = bu_b["benunit_id"].isin(set(p_b.loc[p_b["household_id"].isin(lose_ids)
 winners["losers"] = {
     "records": int(lose.sum()),
     "weighted_households": float(hw[lose].sum()),
-    "change_among_losers_gbp": {
+}
+# sums over a handful of records come close to one record's values; below 10 records publish the count only
+MIN_RECORDS_FOR_SUMS = 10
+if lose.sum() >= MIN_RECORDS_FOR_SUMS:
+    winners["losers"]["change_among_losers_gbp"] = {
         "income_tax": float((f64(p_r["income_tax"]) - f64(p_b["income_tax"]))[p_b["household_id"].isin(lose_ids).to_numpy()].sum()),
         **{v: float((f64(bu_r[v]) - f64(bu_b[v]))[bu_lose.to_numpy()].sum()) for v in ("universal_credit", "pension_credit", "housing_benefit")},
-    },
-    "note": "unweighted sums over the losing records; their means-tested benefits fall by more than their tax cut",
-}
+    }
+    winners["losers"]["note"] = "unweighted sums over the losing records; their means-tested benefits fall by more than their tax cut"
+else:
+    winners["losers"]["note"] = f"fewer than {MIN_RECORDS_FOR_SUMS} records, so only the count and weight are published"
 assert winners["share_households_losing_over_1gbp"] < 0.005, winners
 
 # ------------------------------------------------------------ deciles

@@ -27,13 +27,13 @@
    "python": "3.13.9"
   },
   "runtime_seconds": {
-   "imports": 9.0,
-   "dataset": 10.7,
-   "economic_impact_analysis": 18.7,
-   "child_poverty": 18.8,
-   "budget": 18.8,
-   "aggregates": 18.8,
-   "sample": 18.9
+   "imports": 6.4,
+   "dataset": 8.7,
+   "economic_impact_analysis": 14.8,
+   "child_poverty": 14.9,
+   "budget": 14.9,
+   "aggregates": 14.9,
+   "sample": 15.0
   },
   "script": "tools/uk/national.py",
   "licence_note": "aggregates only; the underlying FRS microdata stay in data/uk/private/"
